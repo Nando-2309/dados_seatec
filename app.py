@@ -31,8 +31,8 @@ df_receitas["Tipo"] = "Receita"
 df_despesas["Tipo"] = "Despesa"
 df = pd.concat([df_receitas, df_despesas])
 
-df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
-df["Mes"] = df["Data"].dt.strftime("%Y-%m")
+df["Data de competência"] = pd.to_datetime(df["Data de competência"], errors="coerce")
+df["Mes"] = df["Data de competência"].dt.strftime("%Y-%m")
 
 # --- Sidebar (Filtros) ---
 st.sidebar.header("Filtros")
