@@ -25,10 +25,21 @@ df_ticket = pd.read_excel(file_path, sheet_name="Ticket Medio Mensal Resumo")
 df_cancelamentos = pd.read_excel(file_path, sheet_name="Cancelamentos Resumo")
 df_churn = pd.read_excel(file_path, sheet_name="Churn Rate Resumo")
 
+# --- Verificar e limpar os nomes das colunas
+df_receitas.columns = df_receitas.columns.str.strip()
+df_despesas.columns = df_despesas.columns.str.strip()
+df_faturamento.columns = df_faturamento.columns.str.strip()
+df_ticket.columns = df_ticket.columns.str.strip()
+df_cancelamentos.columns = df_cancelamentos.columns.str.strip()
+df_churn.columns = df_churn.columns.str.strip()
+
 # --- Preparar dados ---
 df_receitas["Tipo"] = "Receita"
 df_despesas["Tipo"] = "Despesa"
 df = pd.concat([df_receitas, df_despesas])
+
+# Verificar os nomes das colunas para garantir que 'Categoria' está presente
+st.write(df.columns)
 
 df["Data de competência"] = pd.to_datetime(df["Data de competência"], errors="coerce")
 
@@ -37,14 +48,15 @@ df["MesNome"] = df["Data de competência"].dt.strftime("%B %Y")  # Ex: 'Março 2
 
 # --- Sidebar (Filtros) ---
 st.sidebar.header("Filtros")
-meses = sorted(df["MesNome"].dropna().unique())  # Usando a nova coluna com o nome do mês
-mes = st.sidebar.selectbox("Selecione o mês:", meses)
 
-# Filtragem por categorias
-categorias = df["Categoria"].dropna().unique()
-categorias_sel = st.sidebar.multiselect(
-    "Selecione categorias:", categorias, default=categorias
-)
+# Verificar se a coluna 'Categoria' existe antes de tentar acessá-la
+if 'Categoria' in df.columns:
+    categorias = df["Categoria"].dropna().unique()
+    categorias_sel = st.sidebar.multiselect(
+        "Selecione categorias:", categorias, default=categorias
+    )
+else:
+    st.error("A coluna 'Categoria' não foi encontrada no DataFrame!")
 
 # --- Aplicar filtros ---
 df_filtrado = df[(df["MesNome"] == mes) & (df["Categoria"].isin(categorias_sel))]
