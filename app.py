@@ -39,27 +39,18 @@ df_despesas["Tipo"] = "Despesa"
 df = pd.concat([df_receitas, df_despesas])
 
 # Verificar os nomes das colunas para garantir que 'Categoria' está presente
-st.write(df.columns)
-
 df["Data de competência"] = pd.to_datetime(df["Data de competência"], errors="coerce")
 
 # Nova coluna "MesNome" formatada com o nome do mês
 df["MesNome"] = df["Data de competência"].dt.strftime("%B %Y")  # Ex: 'Março 2025'
 
-# --- Sidebar (Filtros) ---
+# --- Sidebar (Filtro de mês) ---
 st.sidebar.header("Filtros")
+meses = sorted(df["MesNome"].dropna().unique())  # Usando a nova coluna com o nome do mês
+mes = st.sidebar.selectbox("Selecione o mês:", meses)
 
-# Verificar se a coluna 'Categoria' existe antes de tentar acessá-la
-if 'Categoria' in df.columns:
-    categorias = df["Categoria"].dropna().unique()
-    categorias_sel = st.sidebar.multiselect(
-        "Selecione categorias:", categorias, default=categorias
-    )
-else:
-    st.error("A coluna 'Categoria' não foi encontrada no DataFrame!")
-
-# --- Aplicar filtros ---
-df_filtrado = df[(df["MesNome"] == mes) & (df["Categoria"].isin(categorias_sel))]
+# --- Aplicar filtro ---
+df_filtrado = df[df["MesNome"] == mes]
 
 # --- Página Principal ---
 st.title("📊 Dashboard Financeiro")
