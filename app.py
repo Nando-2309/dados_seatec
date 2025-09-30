@@ -13,9 +13,8 @@ st.set_page_config(
     page_title="Dashboard de Dados Seatec",
     page_icon="📊",
     layout="wide",
-
-    
 )
+
 # --- Carregar dados ---
 file_path = "todos_resultados_seatec.xlsx"
 
@@ -32,20 +31,23 @@ df_despesas["Tipo"] = "Despesa"
 df = pd.concat([df_receitas, df_despesas])
 
 df["Data de competência"] = pd.to_datetime(df["Data de competência"], errors="coerce")
-df["Mes"] = df["Data de competência"].dt.strftime("%Y-%m")
+
+# Nova coluna "MesNome" formatada com o nome do mês
+df["MesNome"] = df["Data de competência"].dt.strftime("%B %Y")  # Ex: 'Março 2025'
 
 # --- Sidebar (Filtros) ---
 st.sidebar.header("Filtros")
-meses = sorted(df["Mes"].dropna().unique())
+meses = sorted(df["MesNome"].dropna().unique())  # Usando a nova coluna com o nome do mês
 mes = st.sidebar.selectbox("Selecione o mês:", meses)
 
+# Filtragem por categorias
 categorias = df["Categoria"].dropna().unique()
 categorias_sel = st.sidebar.multiselect(
     "Selecione categorias:", categorias, default=categorias
 )
 
 # --- Aplicar filtros ---
-df_filtrado = df[(df["Mes"] == mes) & (df["Categoria"].isin(categorias_sel))]
+df_filtrado = df[(df["MesNome"] == mes) & (df["Categoria"].isin(categorias_sel))]
 
 # --- Página Principal ---
 st.title("📊 Dashboard Financeiro")
