@@ -28,8 +28,13 @@ except Exception as e:
 
 
 # --- Preparar dados ---
+# Adicionar coluna 'Tipo' aos DataFrames de receitas e despesas antes de concatenar
+df_receitas_combinadas["Tipo"] = "Receita"
+df_despesas_combinadas["Tipo"] = "Despesa"
+
 # Concatenar receitas e despesas para o filtro de mês
 df_combined = pd.concat([df_receitas_combinadas, df_despesas_combinadas], ignore_index=True)
+
 
 # Mapeamento meses por extenso para ordenação
 month_order = ['abril', 'maio', 'junho', 'julho', 'agosto'] # Ajuste conforme seus dados
@@ -86,10 +91,12 @@ st.plotly_chart(fig2, use_container_width=True)
 ## Gráfico 3 - Receitas vs Despesas (para o mês selecionado)
 st.subheader(f"Receitas vs Despesas - {mes_selecionado_extenso}")
 # Agrupar e somar receitas e despesas APENAS para o mês filtrado
+# Certifique-se de que 'Tipo' está no df_filtrado antes de agrupar
 df_agg_filtrado = df_filtrado.groupby('Tipo')['Valor total recebido da parcela (R$)'].sum().reset_index() # Usar coluna correta
 # Adicionar a soma das despesas, se a coluna existir
 if 'Valor total pago da parcela (R$)' in df_filtrado.columns:
      df_agg_filtrado_despesas = df_filtrado.groupby('Tipo')['Valor total pago da parcela (R$)'].sum().reset_index()
+     # Concatenar os resultados para o gráfico
      df_agg_filtrado = pd.concat([df_agg_filtrado, df_agg_filtrado_despesas], ignore_index=True)
 
 
