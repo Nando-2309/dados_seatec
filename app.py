@@ -7,15 +7,7 @@ import openpyxl as pxl
 import kaleido as k
 
 
-# --- Configuração da Página ---
-# Define o título da página, o ícone e o layout para ocupar a largura inteira.
-st.set_page_config(
-    page_title="Dashboard de Dados Seatec",
-    page_icon="📊",
-    layout="wide",
-)
-
-# --- Carregar dados ---
+# --- Carregar os dados ---
 file_path = "todos_resultados_seatec.xlsx"
 
 df_receitas = pd.read_excel(file_path, sheet_name="Receitas Combinadas")
@@ -25,35 +17,38 @@ df_ticket = pd.read_excel(file_path, sheet_name="Ticket Medio Mensal Resumo")
 df_cancelamentos = pd.read_excel(file_path, sheet_name="Cancelamentos Resumo")
 df_churn = pd.read_excel(file_path, sheet_name="Churn Rate Resumo")
 
-# --- Verificar e limpar os nomes das colunas
-df_receitas.columns = df_receitas.columns.str.strip()
-df_despesas.columns = df_despesas.columns.str.strip()
-df_faturamento.columns = df_faturamento.columns.str.strip()
-df_ticket.columns = df_ticket.columns.str.strip()
-df_cancelamentos.columns = df_cancelamentos.columns.str.strip()
-df_churn.columns = df_churn.columns.str.strip()
-
-# --- Preparar dados ---
+# --- Preparar dados de receitas e despesas ---
 df_receitas["Tipo"] = "Receita"
 df_despesas["Tipo"] = "Despesa"
 df = pd.concat([df_receitas, df_despesas])
 
-# Verificar os nomes das colunas para garantir que 'Categoria' está presente
-df["Data de competência"] = pd.to_datetime(df["Data de competência"], errors="coerce")
+df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
+df["MesNum"] = df["Data"].dt.month
+df["AnoMes"] = df["Data"].dt.strftime("%Y-%m")
 
-# Nova coluna "MesNome" formatada com o nome do mês
-df["MesNome"] = df["Data de competência"].dt.strftime("%B %Y")  # Ex: 'Março 2025'
+# Dicionário para traduzir número do mês -> nome por extenso
+meses_extenso = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+}
 
-# --- Sidebar (Filtro de mês) ---
+# --- Sidebar com filtro de mês ---
 st.sidebar.header("Filtros")
-meses = sorted(df["MesNome"].dropna().unique())  # Usando a nova coluna com o nome do mês
-mes = st.sidebar.selectbox("Selecione o mês:", meses)
+meses_disponiveis = sorted(df["MesNum"].dropna().unique())
+mes_selecionado = st.sidebar.selectbox(
+    "Selecione o mês:",
+    [meses_extenso[m] for m in meses_disponiveis]
+)
 
-# --- Aplicar filtro ---
-df_filtrado = df[df["MesNome"] == mes]
+# Converter escolha para número
+mes_num = {v: k for k, v in meses_extenso.items()}[mes_selecionado]
 
-# --- Página Principal ---
-st.title("📊 Dashboard Financeiro")
+# Filtrar dados
+df_filtrado = df[df["MesNum"] == mes_num]
+
+# --- Página principal ---
+st.title("📊 Dados da Seatec")
 
 ## Gráfico 1 - Faturamento Bruto
 st.subheader("Faturamento Bruto")
@@ -76,7 +71,7 @@ st.pyplot(fig3)
 ## Gráfico 4 - Lucratividade Mensal
 st.subheader("Lucratividade Mensal")
 fig4, ax4 = plt.subplots()
-(df_receitas.groupby("Mes")["Valor"].sum() - df_despesas.groupby("Mes")["Valor"].sum()).plot(
+(df_receitas.groupby("MesNum")["Valor"].sum() - df_despesas.groupby("MesNum")["Valor"].sum()).plot(
     kind="line", marker="o", ax=ax4
 )
 st.pyplot(fig4)
@@ -87,12 +82,12 @@ fig5, ax5 = plt.subplots()
 df_churn.plot(x="Mes", y="ChurnRate", kind="line", marker="o", ax=ax5)
 st.pyplot(fig5)
 
-## Gráfico 6 - Cancelamentos mês a mês
+## Gráfico 6 - Cancelamentos
 st.subheader("Cancelamentos")
 fig6, ax6 = plt.subplots()
 df_cancelamentos.plot(x="Mes", y="Cancelamentos", kind="bar", ax=ax6)
 st.pyplot(fig6)
 
-# --- Rodapé (Dados Detalhados) ---
+# --- Rodapé com dados detalhados ---
 st.subheader("📑 Dados Detalhados")
 st.dataframe(df_filtrado)
