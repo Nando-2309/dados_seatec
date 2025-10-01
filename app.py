@@ -18,9 +18,9 @@ df_receitas["Tipo"] = "Receita"
 df_despesas["Tipo"] = "Despesa"
 df = pd.concat([df_receitas, df_despesas])
 
-df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
-df["MesNum"] = df["Data"].dt.month
-df["AnoMes"] = df["Data"].dt.strftime("%Y-%m")
+df["Data de competência"] = pd.to_datetime(df["Data de competência"], errors="coerce")
+df["MesNum"] = df["Data de competência"].dt.month
+df["AnoMes"] = df["Data de competência"].dt.strftime("%Y-%m")
 
 # Mapeamento meses por extenso
 meses_extenso = {
