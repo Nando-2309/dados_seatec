@@ -78,6 +78,27 @@ df_filtrado = df_combined[df_combined["Mês"].isin(meses_selecionados_original)]
 # --- Página principal ---
 st.title("📊 Dados da Seatec")
 
+# --- DEBUG: Exibir DataFrames para diagnóstico ---
+# st.subheader("DEBUG: DataFrames Usados nos Gráficos Problemáticos")
+# st.write("df_ticket_medio_mensal:")
+# st.dataframe(df_ticket_medio_mensal)
+# st.write("df_filtrado (para Receitas vs Despesas):")
+# st.dataframe(df_filtrado.head()) # Exibir apenas as primeiras linhas para não sobrecarregar
+# st.write("df_agg_filtrado (para Receitas vs Despesas):")
+# # Recriar df_agg_filtrado aqui para depuração, garantindo que despesas também sejam incluídas com o nome correto
+# df_agg_debug = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total recebido da parcela (R$)'].sum().reset_index().rename(columns={'Valor total recebido da parcela (R$)': 'Valor'})
+# if 'Valor total pago da parcela (R$)' in df_filtrado.columns:
+#      df_agg_despesas_debug = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total pago da parcela (R$)'].sum().reset_index().rename(columns={'Valor total pago da parcela (R$)': 'Valor'})
+#      df_agg_debug = pd.concat([df_agg_debug, df_agg_despesas_debug], ignore_index=True)
+# st.dataframe(df_agg_debug)
+
+# st.write("df_churn_rate_resumo:")
+# st.dataframe(df_churn_rate_resumo)
+# st.write("df_clientes_cancelados_detalhe (filtrado pelos meses selecionados):")
+# st.dataframe(df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy())
+# --- FIM DEBUG ---
+
+
 ## Gráfico 1 - Faturamento Bruto (usando df_faturamento_mensal ordenado)
 st.subheader("Faturamento Bruto")
 # Modificado para gráfico de barras horizontal e colorido
@@ -89,6 +110,7 @@ st.plotly_chart(fig1, use_container_width=True)
 st.subheader("Ticket Médio Mensal")
 # Ajustar o nome da coluna 'TicketMedio' se necessário, com base no seu Excel
 # Garantir que seja uma linha com marcadores
+# A coluna de valores para o ticket médio no excel sheet "Ticket Medio Mensal Resumo" é 'Valor Total Mensalidade'
 fig2 = px.line(df_ticket_medio_mensal, x="Mês", y="Valor Total Mensalidade", markers=True,
                title="Ticket Médio Mensal") # Ajustado para o nome da coluna correto
 st.plotly_chart(fig2, use_container_width=True)
@@ -97,25 +119,37 @@ st.plotly_chart(fig2, use_container_width=True)
 st.subheader(f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}")
 # Agrupar e somar receitas e despesas APENAS para os meses filtrados
 # Certifique-se de que 'Tipo' está no df_filtrado antes de agrupar
-df_agg_filtrado = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total recebido da parcela (R$)'].sum().reset_index() # Agrupar por Mês e Tipo
-# Adicionar a soma das despesas, se a coluna existir e garantir que a coluna de valor seja consistente para o gráfico
-if 'Valor total pago da parcela (R$)' in df_filtrado.columns:
-     df_agg_filtrado_despesas = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total pago da parcela (R$)'].sum().reset_index().rename(columns={'Valor total pago da parcela (R$)': 'Valor total recebido da parcela (R$)'}) # Renomear para consistência
-     df_agg_filtrado = pd.concat([df_agg_filtrado, df_agg_filtrado_despesas], ignore_index=True)
+# Criar DataFrame para o gráfico de Receitas vs Despesas:
+# 1. Separar Receitas e Despesas do df_filtrado
+df_receitas_filtrado = df_filtrado[df_filtrado['Tipo'] == 'Receita'].copy()
+df_despesas_filtrado = df_filtrado[df_filtrado['Tipo'] == 'Despesa'].copy()
+
+# 2. Agrupar por Mês Nome Extenso e somar os valores
+df_receitas_agg = df_receitas_filtrado.groupby('Mês Nome Extenso')['Valor total recebido da parcela (R$)'].sum().reset_index().rename(columns={'Valor total recebido da parcela (R$)': 'Valor'})
+df_receitas_agg['Tipo'] = 'Receita'
+
+df_despesas_agg = df_despesas_filtrado.groupby('Mês Nome Extenso')['Valor total pago da parcela (R$)'].sum().reset_index().rename(columns={'Valor total pago da parcela (R$)': 'Valor'})
+df_despesas_agg['Tipo'] = 'Despesa'
+
+# 3. Concatenar os DataFrames agregados
+df_agg_receitas_despesas = pd.concat([df_receitas_agg, df_despesas_agg], ignore_index=True)
 
 # Modificado para gráfico de barras agrupadas
-fig3 = px.bar(df_agg_filtrado, x="Mês Nome Extenso", y="Valor total recebido da parcela (R$)", color="Tipo",
+fig3 = px.bar(df_agg_receitas_despesas, x="Mês Nome Extenso", y="Valor", color="Tipo",
              barmode='group', # Group the bars side by side
-             title=f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}") # Ajustado para a coluna correta e barmode
+             title=f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}",
+             color_discrete_map={'Receita': 'blue', 'Despesa': 'red'}) # Definir cores
+
 # Ordenar o eixo X pelos meses selecionados
 fig3.update_xaxes(categoryorder='array', categoryarray=meses_selecionados_extenso)
 
 st.plotly_chart(fig3, use_container_width=True)
 
 
-## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado e corrigindo y)
+## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado)
 st.subheader("Lucratividade Mensal")
 # Criando o gráfico de barras e linha sobreposta usando Plotly Go
+# Usar o df_faturamento_mensal que já está ordenado por Mês (feito na preparação dos dados)
 fig4 = go.Figure(data=[
     go.Bar(name='Faturamento', x=df_faturamento_mensal['Mês'], y=df_faturamento_mensal['Faturamento'], marker_color='blue'),
     go.Scatter(name='Evolução da Lucratividade', x=df_faturamento_mensal['Mês'], y=df_faturamento_mensal['Faturamento'], mode='lines+markers', line=dict(color='purple', width=4), marker=dict(color='purple', size=6))
@@ -135,7 +169,7 @@ st.plotly_chart(fig4, use_container_width=True)
 ## Gráfico 5 - Churn Rate (usando df_churn_rate_resumo ordenado)
 st.subheader("Taxa de Rotatividade (Churn Rate) Mensal")
 # Adicionado gráfico de pizza para Churn Rate
-# Ajustar o nome da coluna 'ChurnRate' se necessário, com base no seu Excel
+# O nome da coluna no excel sheet "Churn Rate Resumo" para os valores é 'Identificador do cliente'
 fig5 = px.pie(df_churn_rate_resumo, values='Identificador do cliente', names='Mês',
              title='Taxa de Rotatividade (Churn Rate) por Mês')
 
@@ -143,10 +177,14 @@ fig5 = px.pie(df_churn_rate_resumo, values='Identificador do cliente', names='M�
 # Precisamos formatar os valores de churn rate como strings com '%'
 # Certifique-se que a coluna de valores no df_churn_rate_resumo é a correta para o cálculo do percentual na pizza
 # Assumindo que 'Identificador do cliente' no df_churn_rate_resumo representa o valor para o cálculo do percentual
+# Verifique se a soma dos valores é maior que zero para evitar divisão por zero
 total_churn = df_churn_rate_resumo['Identificador do cliente'].sum()
-churn_rate_labels = [f'{val/total_churn:.1%}' for val in df_churn_rate_resumo['Identificador do cliente'].values]
+if total_churn > 0:
+    churn_rate_labels = [f'{val/total_churn:.1%}' for val in df_churn_rate_resumo['Identificador do cliente'].values]
+    fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_labels) # Usar percent+label para mostrar ambos
+else:
+     fig5.update_traces(textinfo='label+value', insidetextorientation='radial') # Mostra apenas label e valor se o total for zero ou null
 
-fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_labels) # Usar percent+label para mostrar ambos
 
 # Atualiza o layout para alterar o tamanho da fonte do título e deixá-lo em negrito
 fig5.update_layout(
