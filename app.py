@@ -60,18 +60,19 @@ for df_resumo in [df_faturamento_mensal, df_ticket_medio_mensal, df_cancelamento
 
 
 # --- Sidebar com filtro de mês ---
-st.sidebar.header("Filtros")
+st.sidebar.header("🔍 Filtros") # Adicionado ícone de lupa
 
 # Obter meses disponíveis do DataFrame combinado e usar os nomes por extenso para o filtro
 meses_disponiveis_extenso = [meses_extenso[m] for m in month_order if m in df_combined['Mês'].unique()]
 
-mes_selecionado_extenso = st.sidebar.selectbox("Selecione o mês:", meses_disponiveis_extenso)
+# Multi-select para meses com todos selecionados por padrão
+meses_selecionados_extenso = st.sidebar.multiselect("Selecione o(s) mês(es):", meses_disponiveis_extenso, default=meses_disponiveis_extenso)
 
-# Mapear o mês selecionado de volta para o formato original (abril, maio, etc.) para filtrar
-mes_selecionado_original = [k for k, v in meses_extenso.items() if v == mes_selecionado_extenso][0]
+# Mapear os meses selecionados de volta para o formato original (abril, maio, etc.) para filtrar
+meses_selecionados_original = [k for k, v in meses_extenso.items() if v in meses_selecionados_extenso]
 
-# Filtrar dados combinados pelo mês selecionado
-df_filtrado = df_combined[df_combined["Mês"] == mes_selecionado_original].copy() # Usar .copy() para evitar SettingWithCopyWarning
+# Filtrar dados combinados pelos meses selecionados
+df_filtrado = df_combined[df_combined["Mês"].isin(meses_selecionados_original)].copy() # Usar .copy() para evitar SettingWithCopyWarning
 
 
 # --- Página principal ---
@@ -88,23 +89,25 @@ st.subheader("Ticket Médio Mensal")
 fig2 = px.line(df_ticket_medio_mensal, x="Mês", y="Valor Total Mensalidade", markers=True, title="Ticket Médio Mensal") # Ajustado para o nome da coluna correto
 st.plotly_chart(fig2, use_container_width=True)
 
-## Gráfico 3 - Receitas vs Despesas (para o mês selecionado)
-st.subheader(f"Receitas vs Despesas - {mes_selecionado_extenso}")
-# Agrupar e somar receitas e despesas APENAS para o mês filtrado
+## Gráfico 3 - Receitas vs Despesas (para os meses selecionados)
+st.subheader(f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}")
+# Agrupar e somar receitas e despesas APENAS para os meses filtrados
 # Certifique-se de que 'Tipo' está no df_filtrado antes de agrupar
-df_agg_filtrado = df_filtrado.groupby('Tipo')['Valor total recebido da parcela (R$)'].sum().reset_index() # Usar coluna correta
-# Adicionar a soma das despesas, se a coluna existir
+df_agg_filtrado = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total recebido da parcela (R$)'].sum().reset_index() # Agrupar por Mês e Tipo
+# Adicionar a soma das despesas, se a coluna existir e garantir que a coluna de valor seja consistente para o gráfico
 if 'Valor total pago da parcela (R$)' in df_filtrado.columns:
-     df_agg_filtrado_despesas = df_filtrado.groupby('Tipo')['Valor total pago da parcela (R$)'].sum().reset_index()
-     # Concatenar os resultados para o gráfico
+     df_agg_filtrado_despesas = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total pago da parcela (R$)'].sum().reset_index().rename(columns={'Valor total pago da parcela (R$)': 'Valor total recebido da parcela (R$)'}) # Renomear para consistência
      df_agg_filtrado = pd.concat([df_agg_filtrado, df_agg_filtrado_despesas], ignore_index=True)
 
 
-fig3 = px.bar(df_agg_filtrado, x="Tipo", y="Valor total recebido da parcela (R$)", color="Tipo", title=f"Receitas vs Despesas - {mes_selecionado_extenso}") # Ajustado para a coluna correta
+fig3 = px.bar(df_agg_filtrado, x="Mês Nome Extenso", y="Valor total recebido da parcela (R$)", color="Tipo", barmode='group', title=f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}") # Ajustado para a coluna correta e barmode
+# Ordenar o eixo X pelos meses selecionados
+fig3.update_xaxes(categoryorder='array', categoryarray=meses_selecionados_extenso)
+
 st.plotly_chart(fig3, use_container_width=True)
 
 
-## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado e corrigindo y)
+## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado)
 st.subheader("Lucratividade Mensal")
 fig4 = px.line(df_faturamento_mensal, x="Mês", y="Faturamento", markers=True, title="Lucratividade Mensal") # Usar a coluna 'Faturamento'
 st.plotly_chart(fig4, use_container_width=True)
@@ -124,10 +127,10 @@ st.plotly_chart(fig6, use_container_width=True)
 
 
 # --- Rodapé com dados detalhados ---
-st.subheader(f"📑 Dados Detalhados do Mês de {mes_selecionado_extenso}")
+st.subheader(f"📑 Dados Detalhados dos Meses Selecionados")
 
 # Exibir apenas as colunas relevantes e renomeá-las para melhor visualização, se necessário
-colunas_detalhes = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Categoria 1', 'Valor na Categoria 1'] # Exemplo
+colunas_detalhes = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Categoria 1', 'Valor na Categoria 1', 'Mês Nome Extenso'] # Exemplo
 df_detalhes_filtrado = df_filtrado[colunas_detalhes].copy()
 # Opcional: Renomear colunas para português
 df_detalhes_filtrado.rename(columns={
@@ -136,20 +139,21 @@ df_detalhes_filtrado.rename(columns={
     'Descrição': 'Descrição',
     'Valor total recebido da parcela (R$)': 'Valor Recebido Total (R$)',
     'Categoria 1': 'Categoria Principal',
-    'Valor na Categoria 1': 'Valor Categoria Principal (R$)'
+    'Valor na Categoria 1': 'Valor Categoria Principal (R$)',
+    'Mês Nome Extenso': 'Mês'
 }, inplace=True)
 
 
 st.dataframe(df_detalhes_filtrado)
 
-# Exibir detalhes dos clientes cancelados para o mês selecionado
-st.subheader(f"❌ Detalhes dos Clientes Cancelados no Mês de {mes_selecionado_extenso}")
+# Exibir detalhes dos clientes cancelados para os meses selecionados
+st.subheader(f"❌ Detalhes dos Clientes Cancelados nos Meses Selecionados")
 
-# Filtrar o DataFrame de detalhes dos cancelados pelo mês selecionado
-df_cancelados_mes = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'] == mes_selecionado_original].copy()
+# Filtrar o DataFrame de detalhes dos cancelados pelos meses selecionados
+df_cancelados_mes = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy()
 
 # Exibir as colunas relevantes para os detalhes dos cancelados
-colunas_cancelados = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)'] # Exemplo
+colunas_cancelados = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Mês'] # Exemplo
 df_cancelados_mes_detalhes = df_cancelados_mes[colunas_cancelados].copy()
 
 # Opcional: Renomear colunas para português
