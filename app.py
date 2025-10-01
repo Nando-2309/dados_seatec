@@ -32,8 +32,9 @@ df["MesNome"] = df["MesNum"].map(meses_extenso)
 
 # --- Sidebar com filtro de mês (com lupa) ---
 st.sidebar.header("Filtros")
-pesquisa_mes = st.sidebar.text_input("🔍 Pesquisar mês:")
-meses_disponiveis = sorted(df["MesNome"].dropna().unique())
+meses_disponiveis = sorted(df['mês'].unique())
+meses_selecionados = st.sidebar.multiselect("Ano", meses_disponiveis, default=meses_disponiveis)
+
 
 # Aplicar filtro de pesquisa
 if pesquisa_mes:
