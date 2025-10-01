@@ -78,6 +78,27 @@ df_filtrado = df_combined[df_combined["Mês"].isin(meses_selecionados_original)]
 # --- Página principal ---
 st.title("📊 Dados da Seatec")
 
+# --- DEBUG: Exibir DataFrames para diagnóstico ---
+# st.subheader("DEBUG: DataFrames Usados nos Gráficos Problemáticos")
+# st.write("df_ticket_medio_mensal:")
+# st.dataframe(df_ticket_medio_mensal)
+# st.write("df_filtrado (para Receitas vs Despesas):")
+# st.dataframe(df_filtrado.head()) # Exibir apenas as primeiras linhas para não sobrecarregar
+# st.write("df_agg_filtrado (para Receitas vs Despesas):")
+# # Recriar df_agg_filtrado aqui para depuração, garantindo que despesas também sejam incluídas com o nome correto
+# df_agg_debug = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total recebido da parcela (R$)'].sum().reset_index().rename(columns={'Valor total recebido da parcela (R$)': 'Valor'})
+# if 'Valor total pago da parcela (R$)' in df_filtrado.columns:
+#      df_agg_despesas_debug = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total pago da parcela (R$)'].sum().reset_index().rename(columns={'Valor total pago da parcela (R$)': 'Valor'})
+#      df_agg_debug = pd.concat([df_agg_debug, df_agg_despesas_debug], ignore_index=True)
+# st.dataframe(df_agg_debug)
+
+# st.write("df_churn_rate_resumo:")
+# st.dataframe(df_churn_rate_resumo)
+# st.write("df_clientes_cancelados_detalhe (filtrado pelos meses selecionados):")
+# st.dataframe(df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy())
+# --- FIM DEBUG ---
+
+
 ## Gráfico 1 - Faturamento Bruto (usando df_faturamento_mensal ordenado)
 st.subheader("Faturamento Bruto")
 # Modificado para gráfico de barras horizontal e colorido
