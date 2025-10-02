@@ -14,10 +14,12 @@ try:
     df_receitas_combinadas = pd.read_excel(file_path, sheet_name="Receitas Combinadas")
     df_despesas_combinadas = pd.read_excel(file_path, sheet_name="Despesas Combinadas")
     df_faturamento_mensal = pd.read_excel(file_path, sheet_name="Faturamento Mensal")
-    df_ticket_medio_mensal = pd.read_excel(file_path, sheet_name="Ticket Medio Mensal Resumo")
+    # Load other sheets as needed for your calculations and visualizations
     df_cancelamentos_resumo = pd.read_excel(file_path, sheet_name="Cancelamentos Resumo")
     df_churn_rate_resumo = pd.read_excel(file_path, sheet_name="Churn Rate Resumo")
     df_clientes_cancelados_detalhe = pd.read_excel(file_path, sheet_name="Clientes Cancelados Detalhe") # Carregar detalhes dos cancelados
+    df_receita_mensal_resumo = pd.read_excel(file_path, sheet_name="Receita Mensal Resumo") # Load Receita Mensal Resumo
+
 
 except FileNotFoundError:
     st.error(f"Erro: O arquivo {file_path} não foi encontrado. Certifique-se de que o arquivo está no diretório correto.")
@@ -51,12 +53,43 @@ else:
     st.stop()
 
 # Converter a coluna 'Mês' nos DataFrames resumo para categoria com ordem
-for df_resumo in [df_faturamento_mensal, df_ticket_medio_mensal, df_cancelamentos_resumo, df_churn_rate_resumo]:
+for df_resumo in [df_faturamento_mensal, df_cancelamentos_resumo, df_churn_rate_resumo, df_receita_mensal_resumo]: # Added df_receita_mensal_resumo
     if 'Mês' in df_resumo.columns:
         df_resumo['Mês'] = pd.Categorical(df_resumo['Mês'], categories=[meses_extenso[m] for m in month_order], ordered=True)
         df_resumo = df_resumo.sort_values('Mês') # Ordenar pelo mês
     else:
          st.warning(f"Coluna 'Mês' não encontrada no DataFrame resumo: {df_resumo}")
+
+# Re-calculate ticket medio inside the Streamlit app using the original logic
+# Filter the combined DataFrame to include only monthly fees (TC and S8) in any Category column
+mensalidades_df = df_combined[
+    (df_combined['Categoria 1'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE'])) |
+    (df_combined['Categoria 2'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE'])) |
+    (df_combined['Categoria 3'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE'])) |
+    (df_combined['Categoria 4'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE'])) |
+    (df_combined['Categoria 5'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE']))
+].copy() # Adicionado .copy() para evitar SettingWithCopyWarning
+
+# Create a new column with the total monthly fee per row
+# Initialize the column with 0
+mensalidades_df['Valor Total Mensalidade'] = 0.0
+
+# Sum the monthly fee values in each Category column where the category matches
+for i in range(1, 6):
+    categoria_col = f'Categoria {i}'
+    valor_col = f'Valor na Categoria {i}'
+    # Use .loc to avoid SettingWithCopyWarning
+    mensalidades_df.loc[mensalidades_df[categoria_col].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE']), 'Valor Total Mensalidade'] += \
+        mensalidades_df.loc[mensalidades_df[categoria_col].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE']), valor_col].fillna(0)
+
+# Calculate the monthly average ticket using the new 'Valor Total Mensalidade' column
+# Group the filtered DataFrame by month and calculate the mean of the new column
+ticket_medio_mensalidades = mensalidades_df.groupby('Mês')['Valor Total Mensalidade'].mean().reset_index() # Reset index to make 'Mês' a column
+
+# Ensure the 'Mês' column in ticket_medio_mensalidades is in categorical format with the correct order and mapped to full names
+ticket_medio_mensalidades['Mês Nome Extenso'] = ticket_medio_mensalidades['Mês'].map(meses_extenso)
+ticket_medio_mensalidades['Mês Nome Extenso'] = pd.Categorical(ticket_medio_mensalidades['Mês Nome Extenso'], categories=[meses_extenso[m] for m in month_order], ordered=True)
+ticket_medio_mensalidades = ticket_medio_mensalidades.sort_values('Mês Nome Extenso') # Sort by full month name
 
 
 # --- Sidebar com filtro de mês ---
@@ -79,29 +112,21 @@ df_filtrado = df_combined[df_combined["Mês"].isin(meses_selecionados_original)]
 st.title("📊 Dados da Seatec")
 
 
-## Gráfico 1 - Faturamento Bruto (usando df_faturamento_mensal ordenado)
+## Gráfico 1 - Faturamento Bruto (usando df_receita_mensal_resumo ordenado)
 st.subheader("Faturamento Bruto")
 # Modificado para gráfico de barras horizontal e colorido
-fig1 = px.bar(df_faturamento_mensal, x="Valor_Receita", y="Mês", orientation='h',
+# Use df_receita_mensal_resumo which should contain the summed monthly revenue
+fig1 = px.bar(df_receita_mensal_resumo, x="Valor total recebido da parcela (R$)", y="Mês", orientation='h',
               title="Faturamento Bruto Mensal", color="Mês")
 st.plotly_chart(fig1, use_container_width=True)
 
-## Gráfico 2 - Ticket Médio (usando df_ticket_medio_mensal ordenado)
-# --- Gráfico Ticket Médio ---
-st.subheader("Ticket Médio")
 
-if not df_ticket_medio_mensal.empty and 'Mês' in df_ticket_medio_mensal.columns:
-    fig_ticket = px.line(
-        df_ticket_medio_mensal,
-        x="Mês",
-        y="Ticket Medio (R$)",  # ajuste o nome da coluna se for diferente
-        markers=True,
-        title="Ticket Médio Mensal (R$)"
-    )
-    fig_ticket.update_traces(line=dict(color='purple', width=2), marker=dict(size=10))
-    st.plotly_chart(fig_ticket, use_container_width=True)
-else:
-    st.warning("Não há dados de ticket médio para exibir.")
+## Gráfico 2 - Ticket Médio (usando ticket_medio_mensalidades calculado in-app)
+st.subheader("Ticket Médio Mensal")
+# Use the calculated ticket_medio_mensalidades DataFrame for plotting
+fig2 = px.line(ticket_medio_mensalidades, x="Mês Nome Extenso", y="Valor Total Mensalidade", markers=True,
+               title="Ticket Médio Mensal") # Adjusted to use 'Mês Nome Extenso' and correct value column
+st.plotly_chart(fig2, use_container_width=True)
 
 ## Gráfico 3 - Receitas vs Despesas (para os meses selecionados)
 st.subheader(f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}")
@@ -168,13 +193,14 @@ fig5 = px.pie(df_churn_rate_resumo, values='Identificador do cliente', names='M�
 # Verifique se a soma dos valores é maior que zero para evitar divisão por zero
 total_churn = df_churn_rate_resumo['Identificador do cliente'].sum()
 if total_churn > 0:
-    churn_rate_labels = [f'{val/total_churn:.1%}' for val in df_churn_rate_resumo['Identificador do cliente'].values]
-    fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_labels) # Usar percent+label para mostrar ambos
+    # Calculate percentages based on the values in the DataFrame
+    churn_rate_percentages = [f'{(val / total_churn):.1%}' for val in df_churn_rate_resumo['Identificador do cliente'].values]
+    fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_percentages) # Use percent+label to show both
 else:
-     fig5.update_traces(textinfo='label+value', insidetextorientation='radial') # Mostra apenas label e valor se o total for zero ou null
+     fig5.update_traces(textinfo='label+value', insidetextorientation='radial') # Show only label and value if total is zero or null
 
 
-# Atualiza o layout para alterar o tamanho da fonte do título e deixá-lo em negrito
+# Update layout to change the title font size and make it bold
 fig5.update_layout(
     title={
         'text': 'Taxa de Rotatividade (Churn Rate) por Mês',
@@ -186,7 +212,7 @@ fig5.update_layout(
             'size': 20,
             'family': 'Arial',
             'color': 'black',
-            'weight': 'bold' # Deixa o título em negrito
+            'weight': 'bold' # Make title bold
         }
     }
 )
@@ -195,17 +221,17 @@ st.plotly_chart(fig5, use_container_width=True)
 
 ## Gráfico 6 - Cancelamentos (usando df_clientes_cancelados_detalhe e df_cancelamentos_resumo)
 st.subheader("Cancelamentos Mês a Mês")
-# Adicionado gráfico de boxplot para Cancelamentos
-# Usar df_clientes_cancelados_detalhe para o boxplot, que contém os valores individuais por cancelamento
-# Mapear o mês original para o nome extenso para o eixo X
+# Added boxplot for Cancellations
+# Use df_clientes_cancelados_detalhe for the boxplot, which contains the individual values per cancellation
+# Map the original month to the full name for the X axis
 df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
 
-# Criar o boxplot usando Plotly Express
-# Certifique-se que a coluna 'Valor total recebido da parcela (R$)' existe neste DataFrame
+# Create the boxplot using Plotly Express
+# Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
 if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe.columns:
     fig6 = px.box(df_clientes_cancelados_detalhe, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
                   title='Cancelamentos Mês a Mês - Distribuição de Valores',
-                  category_orders={'Mês Nome Extenso': [meses_extenso[m] for m in month_order]}) # Ordenar os meses
+                  category_orders={'Mês Nome Extenso': [meses_extenso[m] for m in month_order]}) # Order the months
 
     st.plotly_chart(fig6, use_container_width=True)
 else:
