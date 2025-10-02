@@ -257,8 +257,8 @@ if 'Mês' in df_clientes_cancelados_detalhe.columns:
     # Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
     if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe.columns and not df_clientes_cancelados_detalhe.empty:
         fig6 = px.box(df_clientes_cancelados_detalhe, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
-                  title='Cancelamentos Mês a Mês - Distribuição de Valores',
-                  category_orders={'Mês Nome Extenso': [meses_extenso[m] for m in month_order]}) # Order the months
+                      title='Cancelamentos Mês a Mês - Distribuição de Valores',
+                      category_orders={'Mês Nome Extenso': [meses_extenso[m] for m in month_order]}) # Order the months
 
         st.plotly_chart(fig6, use_container_width=True)
     elif df_clientes_cancelados_detalhe.empty:
