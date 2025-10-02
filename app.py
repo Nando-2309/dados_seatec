@@ -114,6 +114,12 @@ st.title("📊 Dados da Seatec")
 
 ## Gráfico 1 - Faturamento Bruto (usando df_receita_mensal_resumo ordenado)
 st.subheader("Faturamento Bruto")
+
+# Debugging: Check if this section is reached and if df_receita_mensal_resumo is not empty
+st.write("Debug: Antes de plotar Faturamento Bruto")
+st.write(f"Debug: df_receita_mensal_resumo is empty: {df_receita_mensal_resumo.empty}")
+
+
 # Modificado para gráfico de barras horizontal e colorido
 # Use df_receita_mensal_resumo which should contain the summed monthly revenue
 # Check if the DataFrame is not empty before plotting
@@ -124,6 +130,7 @@ if not df_receita_mensal_resumo.empty:
 else:
     st.warning("Dados de faturamento bruto não disponíveis.")
 
+st.write("Debug: Depois de tentar plotar Faturamento Bruto")
 
 ## Gráfico 2 - Ticket Médio (usando ticket_medio_mensalidades calculado in-app)
 st.subheader("Ticket Médio Mensal")
@@ -257,8 +264,8 @@ if 'Mês' in df_clientes_cancelados_detalhe.columns:
     # Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
     if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe.columns and not df_clientes_cancelados_detalhe.empty:
         fig6 = px.box(df_clientes_cancelados_detalhe, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
-                      title='Cancelamentos Mês a Mês - Distribuição de Valores',
-                      category_orders={'Mês Nome Extenso': [meses_extenso[m] for m in month_order]}) # Order the months
+                  title='Cancelamentos Mês a Mês - Distribuição de Valores',
+                  category_orders={'Mês Nome Extenso': [meses_extenso[m] for m in month_order]}) # Order the months
 
         st.plotly_chart(fig6, use_container_width=True)
     elif df_clientes_cancelados_detalhe.empty:
