@@ -116,9 +116,13 @@ st.title("📊 Dados da Seatec")
 st.subheader("Faturamento Bruto")
 # Modificado para gráfico de barras horizontal e colorido
 # Use df_receita_mensal_resumo which should contain the summed monthly revenue
-fig1 = px.bar(df_receita_mensal_resumo, x="Valor total recebido da parcela (R$)", y="Mês", orientation='h',
-              title="Faturamento Bruto Mensal", color="Mês")
-st.plotly_chart(fig1, use_container_width=True)
+# Check if the DataFrame is not empty before plotting
+if not df_receita_mensal_resumo.empty:
+    fig1 = px.bar(df_receita_mensal_resumo, x="Valor total recebido da parcela (R$)", y="Mês", orientation='h',
+                  title="Faturamento Bruto Mensal", color="Mês")
+    st.plotly_chart(fig1, use_container_width=True)
+else:
+    st.warning("Dados de faturamento bruto não disponíveis.")
 
 
 ## Gráfico 2 - Ticket Médio (usando ticket_medio_mensalidades calculado in-app)
@@ -159,76 +163,86 @@ df_despesas_agg['Tipo'] = 'Despesa'
 # 3. Concatenar os DataFrames agregados
 df_agg_receitas_despesas = pd.concat([df_receitas_agg, df_despesas_agg], ignore_index=True)
 
-# Modificado para gráfico de barras agrupadas
-fig3 = px.bar(df_agg_receitas_despesas, x="Mês Nome Extenso", y="Valor", color="Tipo",
-             barmode='group', # Group the bars side by side
-             title=f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}",
-             color_discrete_map={'Receita': 'blue', 'Despesa': 'red'}) # Definir cores
+# Check if the DataFrame is not empty before plotting
+if not df_agg_receitas_despesas.empty:
+    # Modificado para gráfico de barras agrupadas
+    fig3 = px.bar(df_agg_receitas_despesas, x="Mês Nome Extenso", y="Valor", color="Tipo",
+                 barmode='group', # Group the bars side by side
+                 title=f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}",
+                 color_discrete_map={'Receita': 'blue', 'Despesa': 'red'}) # Definir cores
 
-# Ordenar o eixo X pelos meses selecionados
-fig3.update_xaxes(categoryorder='array', categoryarray=meses_selecionados_extenso)
+    # Ordenar o eixo X pelos meses selecionados
+    fig3.update_xaxes(categoryorder='array', categoryarray=meses_selecionados_extenso)
 
-st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(fig3, use_container_width=True)
+else:
+    st.warning("Dados de receitas e despesas não disponíveis para os meses selecionados.")
 
 
 ## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado)
 st.subheader("Lucratividade Mensal")
 # Criando o gráfico de barras e linha sobreposta usando Plotly Go
 # Usar o df_faturamento_mensal que já está ordenado por Mês (feito na preparação dos dados)
-fig4 = go.Figure(data=[
-    go.Bar(name='Faturamento', x=df_faturamento_mensal['Mês'], y=df_faturamento_mensal['Faturamento'], marker_color='blue'),
-    go.Scatter(name='Evolução da Lucratividade', x=df_faturamento_mensal['Mês'], y=df_faturamento_mensal['Faturamento'], mode='lines+markers', line=dict(color='purple', width=4), marker=dict(color='purple', size=6))
-])
+if not df_faturamento_mensal.empty:
+    fig4 = go.Figure(data=[
+        go.Bar(name='Faturamento', x=df_faturamento_mensal['Mês'], y=df_faturamento_mensal['Faturamento'], marker_color='blue'),
+        go.Scatter(name='Evolução da Lucratividade', x=df_faturamento_mensal['Mês'], y=df_faturamento_mensal['Faturamento'], mode='lines+markers', line=dict(color='purple', width=4), marker=dict(color='purple', size=6))
+    ])
 
-# Atualizando o layout
-fig4.update_layout(
-    title='Lucratividade Mensal (R$)',
-    xaxis_title='Mês',
-    yaxis_title='Faturamento (R$)',
-    xaxis_tickangle=45,
-    barmode='overlay' # Para sobrepor a linha nas barras
-)
-st.plotly_chart(fig4, use_container_width=True)
+    # Atualizando o layout
+    fig4.update_layout(
+        title='Lucratividade Mensal (R$)',
+        xaxis_title='Mês',
+        yaxis_title='Faturamento (R$)',
+        xaxis_tickangle=45,
+        barmode='overlay' # Para sobrepor a linha nas barras
+    )
+    st.plotly_chart(fig4, use_container_width=True)
+else:
+    st.warning("Dados de faturamento mensal não disponíveis.")
 
 
 ## Gráfico 5 - Churn Rate (usando df_churn_rate_resumo ordenado)
 st.subheader("Taxa de Rotatividade (Churn Rate) Mensal")
 # Adicionado gráfico de pizza para Churn Rate
 # O nome da coluna no excel sheet "Churn Rate Resumo" para os valores é 'Identificador do cliente'
-fig5 = px.pie(df_churn_rate_resumo, values='Identificador do cliente', names='Mês',
+if not df_churn_rate_resumo.empty:
+    fig5 = px.pie(df_churn_rate_resumo, values='Identificador do cliente', names='Mês',
              title='Taxa de Rotatividade (Churn Rate) por Mês')
 
-# Atualiza os traços para mostrar o percentual real de churn rate para cada mês
-# Precisamos formatar os valores de churn rate como strings com '%'
-# Certifique-se que a coluna de valores no df_churn_rate_resumo é a correta para o cálculo do percentual na pizza
-# Assumindo que 'Identificador do cliente' no df_churn_rate_resumo representa o valor para o cálculo do percentual
-# Verifique se a soma dos valores é maior que zero para evitar divisão por zero
-total_churn = df_churn_rate_resumo['Identificador do cliente'].sum()
-if total_churn > 0:
-    # Calculate percentages based on the values in the DataFrame
-    churn_rate_percentages = [f'{(val / total_churn):.1%}' for val in df_churn_rate_resumo['Identificador do cliente'].values]
-    fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_percentages) # Use percent+label to show both
-else:
-     fig5.update_traces(textinfo='label+value', insidetextorientation='radial') # Show only label and value if total is zero or null
+    # Atualiza os traços para mostrar o percentual real de churn rate para cada mês
+    # Precisamos formatar os valores de churn rate como strings com '%'
+    # Certifique-se que a coluna de valores no df_churn_rate_resumo é a correta para o cálculo do percentual na pizza
+    # Assumindo que 'Identificador do cliente' no df_churn_rate_resumo representa o valor para o cálculo do percentual
+    # Verifique se a soma dos valores é maior que zero para evitar divisão por zero
+    total_churn = df_churn_rate_resumo['Identificador do cliente'].sum()
+    if total_churn > 0:
+        # Calculate percentages based on the values in the DataFrame
+        churn_rate_percentages = [f'{(val / total_churn):.1%}' for val in df_churn_rate_resumo['Identificador do cliente'].values]
+        fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_percentages) # Use percent+label to show both
+    else:
+         fig5.update_traces(textinfo='label+value', insidetextorientation='radial') # Show only label and value if total is zero or null
 
 
-# Update layout to change the title font size and make it bold
-fig5.update_layout(
-    title={
-        'text': 'Taxa de Rotatividade (Churn Rate) por Mês',
-        'y':0.9,
-        'x':0.5,
-        'xanchor': 'center',
-        'yanchor': 'top',
-        'font': {
-            'size': 20,
-            'family': 'Arial',
-            'color': 'black',
-            'weight': 'bold' # Make title bold
+    # Update layout to change the title font size and make it bold
+    fig5.update_layout(
+        title={
+            'text': 'Taxa de Rotatividade (Churn Rate) por Mês',
+            'y':0.9,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top',
+            'font': {
+                'size': 20,
+                'family': 'Arial',
+                'color': 'black',
+                'weight': 'bold' # Make title bold
+            }
         }
-    }
-)
-st.plotly_chart(fig5, use_container_width=True)
+    )
+    st.plotly_chart(fig5, use_container_width=True)
+else:
+    st.warning("Dados de Churn Rate não disponíveis.")
 
 
 ## Gráfico 6 - Cancelamentos (usando df_clientes_cancelados_detalhe e df_cancelamentos_resumo)
@@ -236,18 +250,24 @@ st.subheader("Cancelamentos Mês a Mês")
 # Added boxplot for Cancellations
 # Use df_clientes_cancelados_detalhe for the boxplot, which contains the individual values per cancellation
 # Map the original month to the full name for the X axis
-df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
+if 'Mês' in df_clientes_cancelados_detalhe.columns:
+    df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
 
-# Create the boxplot using Plotly Express
-# Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
-if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe.columns:
-    fig6 = px.box(df_clientes_cancelados_detalhe, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
+    # Create the boxplot using Plotly Express
+    # Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
+    if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe.columns and not df_clientes_cancelados_detalhe.empty:
+        fig6 = px.box(df_clientes_cancelados_detalhe, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
                   title='Cancelamentos Mês a Mês - Distribuição de Valores',
                   category_orders={'Mês Nome Extenso': [meses_extenso[m] for m in month_order]}) # Order the months
 
-    st.plotly_chart(fig6, use_container_width=True)
+        st.plotly_chart(fig6, use_container_width=True)
+    elif df_clientes_cancelados_detalhe.empty:
+        st.warning("Dados de clientes cancelados não disponíveis para o boxplot.")
+    else:
+        st.warning("Coluna 'Valor total recebido da parcela (R$)' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
 else:
-    st.warning("Coluna 'Valor total recebido da parcela (R$)' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
+    st.warning("Coluna 'Mês' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
+
 
 
 # --- Rodapé com dados detalhados ---
@@ -255,38 +275,54 @@ st.subheader(f"📑 Dados Detalhados dos Meses Selecionados")
 
 # Exibir apenas as colunas relevantes e renomeá-las para melhor visualização, se necessário
 colunas_detalhes = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Categoria 1', 'Valor na Categoria 1', 'Mês Nome Extenso'] # Exemplo
-df_detalhes_filtrado = df_filtrado[colunas_detalhes].copy()
-# Opcional: Renomear colunas para português
-df_detalhes_filtrado.rename(columns={
-    'Identificador do cliente': 'ID Cliente',
-    'Nome do cliente': 'Nome Cliente',
-    'Descrição': 'Descrição',
-    'Valor total recebido da parcela (R$)': 'Valor Recebido Total (R$)',
-    'Categoria 1': 'Categoria Principal',
-    'Valor na Categoria 1': 'Valor Categoria Principal (R$)',
-    'Mês Nome Extenso': 'Mês'
-}, inplace=True)
+
+# Check if df_filtrado is not empty before selecting columns
+if not df_filtrado.empty:
+    # Ensure all required columns exist in df_filtrado before selecting
+    required_cols_detalhes = [col for col in colunas_detalhes if col in df_filtrado.columns]
+    df_detalhes_filtrado = df_filtrado[required_cols_detalhes].copy()
+
+    # Opcional: Renomear colunas para português
+    df_detalhes_filtrado.rename(columns={
+        'Identificador do cliente': 'ID Cliente',
+        'Nome do cliente': 'Nome Cliente',
+        'Descrição': 'Descrição',
+        'Valor total recebido da parcela (R$)': 'Valor Recebido Total (R$)',
+        'Categoria 1': 'Categoria Principal',
+        'Valor na Categoria 1': 'Valor Categoria Principal (R$)',
+        'Mês Nome Extenso': 'Mês'
+    }, inplace=True)
 
 
-st.dataframe(df_detalhes_filtrado)
+    st.dataframe(df_detalhes_filtrado)
+else:
+    st.warning("Dados detalhados não disponíveis para os meses selecionados.")
+
 
 # Exibir detalhes dos clientes cancelados para os meses selecionados
 st.subheader(f"❌ Detalhes dos Clientes Cancelados nos Meses Selecionados")
 
 # Filtrar o DataFrame de detalhes dos cancelados pelos meses selecionados
-df_cancelados_mes = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy()
+# Check if df_clientes_cancelados_detalhe is not empty before filtering
+if not df_clientes_cancelados_detalhe.empty:
+    df_cancelados_mes = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy()
 
-# Exibir as colunas relevantes para os detalhes dos cancelados
-colunas_cancelados = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Mês Nome Extenso'] # Incluir Mês Nome Extenso
-df_cancelados_mes_detalhes = df_cancelados_mes[colunas_cancelados].copy()
+    # Exibir as colunas relevantes para os detalhes dos cancelados
+    colunas_cancelados = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Mês Nome Extenso'] # Incluir Mês Nome Extenso
+    # Ensure all required columns exist in df_cancelados_mes before selecting
+    required_cols_cancelados = [col for col in colunas_cancelados if col in df_cancelados_mes.columns]
+    df_cancelados_mes_detalhes = df_cancelados_mes[required_cols_cancelados].copy()
 
-# Opcional: Renomear colunas para português
-df_cancelados_mes_detalhes.rename(columns={
-    'Identificador do cliente': 'ID Cliente',
-    'Nome do cliente': 'Nome Cliente',
-    'Descrição': 'Descrição',
-    'Valor total recebido da parcela (R$)': 'Valor Recebido (R$)',
-    'Mês Nome Extenso': 'Mês'
-}, inplace=True)
 
-st.dataframe(df_cancelados_mes_detalhes)
+    # Opcional: Renomear colunas para português
+    df_cancelados_mes_detalhes.rename(columns={
+        'Identificador do cliente': 'ID Cliente',
+        'Nome do cliente': 'Nome Cliente',
+        'Descrição': 'Descrição',
+        'Valor total recebido da parcela (R$)': 'Valor Recebido (R$)',
+        'Mês Nome Extenso': 'Mês'
+    }, inplace=True)
+
+    st.dataframe(df_cancelados_mes_detalhes)
+else:
+    st.warning("Detalhes de clientes cancelados não disponíveis para os meses selecionados.")
