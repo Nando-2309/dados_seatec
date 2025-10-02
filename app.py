@@ -108,12 +108,37 @@ st.plotly_chart(fig1, use_container_width=True)
 
 ## Gráfico 2 - Ticket Médio (usando df_ticket_medio_mensal ordenado)
 st.subheader("Ticket Médio Mensal")
-# Ajustar o nome da coluna 'TicketMedio' se necessário, com base no seu Excel
-# Garantir que seja uma linha com marcadores
-# A coluna de valores para o ticket médio no excel sheet "Ticket Medio Mensal Resumo" é 'Valor Total Mensalidade'
-fig2 = px.line(df_ticket_medio_mensal, x="Mês", y="Valor Total Mensalidade", markers=True,
-               title="Ticket Médio Mensal") # Ajustado para o nome da coluna correto
+# --- CÁLCULO DO TICKET MÉDIO ---
+mensalidades_df = combined_df[
+    (combined_df['Categoria 1'].isin([...])) |
+    (combined_df['Categoria 2'].isin([...])) |
+    (combined_df['Categoria 3'].isin([...])) |
+    (combined_df['Categoria 4'].isin([...])) |
+    (combined_df['Categoria 5'].isin([...]))
+].copy()
+
+mensalidades_df['Valor Total Mensalidade'] = 0.0
+
+for i in range(1, 6):
+    categoria_col = f'Categoria {i}'
+    valor_col = f'Valor na Categoria {i}'
+    mask = mensalidades_df[categoria_col].isin([...])
+    mensalidades_df.loc[mask, 'Valor Total Mensalidade'] += mensalidades_df.loc[mask, valor_col].fillna(0)
+
+ticket_medio_mensal = mensalidades_df.groupby('Mês')['Valor Total Mensalidade'].mean().reset_index()
+
+# --- GRÁFICO ---
+st.subheader("Ticket Médio")
+fig2 = px.line(
+    ticket_medio_mensal,
+    x="Mês",
+    y="Valor Total Mensalidade",
+    markers=True,
+    title="Ticket Médio Mensal das Mensalidades (R$)"
+)
+fig2.update_traces(line=dict(color='purple', width=2), marker=dict(size=10))
 st.plotly_chart(fig2, use_container_width=True)
+
 
 ## Gráfico 3 - Receitas vs Despesas (para os meses selecionados)
 st.subheader(f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}")
