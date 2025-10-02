@@ -123,10 +123,22 @@ st.plotly_chart(fig1, use_container_width=True)
 
 ## Gráfico 2 - Ticket Médio (usando ticket_medio_mensalidades calculado in-app)
 st.subheader("Ticket Médio Mensal")
-# Use the calculated ticket_medio_mensalidades DataFrame for plotting
-fig2 = px.line(ticket_medio_mensalidades, x="Mês Nome Extenso", y="Valor Total Mensalidade", markers=True,
-               title="Ticket Médio Mensal") # Adjusted to use 'Mês Nome Extenso' and correct value column
-st.plotly_chart(fig2, use_container_width=True)
+
+# Check if the DataFrame is not empty before plotting
+if not ticket_medio_mensalidades.empty:
+    # Create a line chart using go.Scatter
+    fig2 = go.Figure(data=go.Scatter(x=ticket_medio_mensalidades['Mês Nome Extenso'], y=ticket_medio_mensalidades['Valor Total Mensalidade'], mode='lines+markers'))
+
+    # Update layout for the line chart
+    fig2.update_layout(
+        title='Ticket Médio Mensal',
+        xaxis_title='Mês',
+        yaxis_title='Ticket Médio (R$)'
+    )
+    st.plotly_chart(fig2, use_container_width=True)
+else:
+    st.warning("Dados de ticket médio não disponíveis para os meses selecionados.")
+
 
 ## Gráfico 3 - Receitas vs Despesas (para os meses selecionados)
 st.subheader(f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}")
