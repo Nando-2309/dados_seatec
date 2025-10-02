@@ -78,26 +78,6 @@ df_filtrado = df_combined[df_combined["Mês"].isin(meses_selecionados_original)]
 # --- Página principal ---
 st.title("📊 Dados da Seatec")
 
-# --- DEBUG: Exibir DataFrames para diagnóstico ---
-# st.subheader("DEBUG: DataFrames Usados nos Gráficos Problemáticos")
-# st.write("df_ticket_medio_mensal:")
-# st.dataframe(df_ticket_medio_mensal)
-# st.write("df_filtrado (para Receitas vs Despesas):")
-# st.dataframe(df_filtrado.head()) # Exibir apenas as primeiras linhas para não sobrecarregar
-# st.write("df_agg_filtrado (para Receitas vs Despesas):")
-# # Recriar df_agg_filtrado aqui para depuração, garantindo que despesas também sejam incluídas com o nome correto
-# df_agg_debug = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total recebido da parcela (R$)'].sum().reset_index().rename(columns={'Valor total recebido da parcela (R$)': 'Valor'})
-# if 'Valor total pago da parcela (R$)' in df_filtrado.columns:
-#      df_agg_despesas_debug = df_filtrado.groupby(['Mês Nome Extenso', 'Tipo'])['Valor total pago da parcela (R$)'].sum().reset_index().rename(columns={'Valor total pago da parcela (R$)': 'Valor'})
-#      df_agg_debug = pd.concat([df_agg_debug, df_agg_despesas_debug], ignore_index=True)
-# st.dataframe(df_agg_debug)
-
-# st.write("df_churn_rate_resumo:")
-# st.dataframe(df_churn_rate_resumo)
-# st.write("df_clientes_cancelados_detalhe (filtrado pelos meses selecionados):")
-# st.dataframe(df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy())
-# --- FIM DEBUG ---
-
 
 ## Gráfico 1 - Faturamento Bruto (usando df_faturamento_mensal ordenado)
 st.subheader("Faturamento Bruto")
@@ -107,38 +87,21 @@ fig1 = px.bar(df_faturamento_mensal, x="Valor_Receita", y="Mês", orientation='h
 st.plotly_chart(fig1, use_container_width=True)
 
 ## Gráfico 2 - Ticket Médio (usando df_ticket_medio_mensal ordenado)
-st.subheader("Ticket Médio Mensal")
-# --- CÁLCULO DO TICKET MÉDIO ---
-mensalidades_df = combined_df[
-    (combined_df['Categoria 1'].isin([...])) |
-    (combined_df['Categoria 2'].isin([...])) |
-    (combined_df['Categoria 3'].isin([...])) |
-    (combined_df['Categoria 4'].isin([...])) |
-    (combined_df['Categoria 5'].isin([...]))
-].copy()
-
-mensalidades_df['Valor Total Mensalidade'] = 0.0
-
-for i in range(1, 6):
-    categoria_col = f'Categoria {i}'
-    valor_col = f'Valor na Categoria {i}'
-    mask = mensalidades_df[categoria_col].isin([...])
-    mensalidades_df.loc[mask, 'Valor Total Mensalidade'] += mensalidades_df.loc[mask, valor_col].fillna(0)
-
-ticket_medio_mensal = mensalidades_df.groupby('Mês')['Valor Total Mensalidade'].mean().reset_index()
-
-# --- GRÁFICO ---
+# --- Gráfico Ticket Médio ---
 st.subheader("Ticket Médio")
-fig2 = px.line(
-    ticket_medio_mensal,
-    x="Mês",
-    y="Valor Total Mensalidade",
-    markers=True,
-    title="Ticket Médio Mensal das Mensalidades (R$)"
-)
-fig2.update_traces(line=dict(color='purple', width=2), marker=dict(size=10))
-st.plotly_chart(fig2, use_container_width=True)
 
+if not df_ticket_medio_mensal.empty and 'Mês' in df_ticket_medio_mensal.columns:
+    fig_ticket = px.line(
+        df_ticket_medio_mensal,
+        x="Mês",
+        y="Ticket Medio (R$)",  # ajuste o nome da coluna se for diferente
+        markers=True,
+        title="Ticket Médio Mensal (R$)"
+    )
+    fig_ticket.update_traces(line=dict(color='purple', width=2), marker=dict(size=10))
+    st.plotly_chart(fig_ticket, use_container_width=True)
+else:
+    st.warning("Não há dados de ticket médio para exibir.")
 
 ## Gráfico 3 - Receitas vs Despesas (para os meses selecionados)
 st.subheader(f"Receitas vs Despesas - {' / '.join(meses_selecionados_extenso)}")
