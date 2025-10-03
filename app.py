@@ -20,6 +20,10 @@ try:
     df_clientes_cancelados_detalhe = pd.read_excel(file_path, sheet_name="Clientes Cancelados Detalhe") # Carregar detalhes dos cancelados
     df_receita_mensal_resumo = pd.read_excel(file_path, sheet_name="Receita Mensal Resumo") # Load Receita Mensal Resumo
 
+    # Debugging: Display columns of df_faturamento_mensal after loading
+    st.write("Debug: Colunas de df_faturamento_mensal após carregar:")
+    st.write(df_faturamento_mensal.columns)
+
 
 except FileNotFoundError:
     st.error(f"Erro: O arquivo {file_path} não foi encontrado. Certifique-se de que o arquivo está no diretório correto.")
@@ -114,12 +118,6 @@ st.title("📊 Dados da Seatec")
 
 ## Gráfico 1 - Faturamento Bruto (usando df_receita_mensal_resumo ordenado)
 st.subheader("Faturamento Bruto")
-
-# Debugging: Check if this section is reached and if df_receita_mensal_resumo is not empty
-st.write("Debug: Antes de plotar Faturamento Bruto")
-st.write(f"Debug: df_receita_mensal_resumo is empty: {df_receita_mensal_resumo.empty}")
-
-
 # Modificado para gráfico de barras horizontal e colorido
 # Use df_receita_mensal_resumo which should contain the summed monthly revenue
 # Check if the DataFrame is not empty before plotting
@@ -130,7 +128,6 @@ if not df_receita_mensal_resumo.empty:
 else:
     st.warning("Dados de faturamento bruto não disponíveis.")
 
-st.write("Debug: Depois de tentar plotar Faturamento Bruto")
 
 ## Gráfico 2 - Ticket Médio (usando ticket_medio_mensalidades calculado in-app)
 st.subheader("Ticket Médio Mensal")
@@ -188,6 +185,11 @@ else:
 
 ## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado)
 st.subheader("Lucratividade Mensal")
+
+# Debugging: Display columns of df_faturamento_mensal before plotting
+st.write("Debug: Colunas de df_faturamento_mensal antes de plotar Gráfico 4:")
+st.write(df_faturamento_mensal.columns)
+
 # Criando o gráfico de barras e linha sobreposta usando Plotly Go
 # Usar o df_faturamento_mensal que já está ordenado por Mês (feito na preparação dos dados)
 if not df_faturamento_mensal.empty:
