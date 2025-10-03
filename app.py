@@ -55,6 +55,11 @@ else:
 # Converter a coluna 'Mês' nos DataFrames resumo para categoria com ordem
 for df_resumo in [df_faturamento_mensal, df_cancelamentos_resumo, df_churn_rate_resumo, df_receita_mensal_resumo]: # Added df_receita_mensal_resumo
     if 'Mês' in df_resumo.columns:
+        # Check if the month names in the DataFrame match the keys or values in meses_extenso
+        # If they match keys, map them to values (full names)
+        if all(df_resumo['Mês'].isin(month_order)):
+             df_resumo['Mês'] = df_resumo['Mês'].map(meses_extenso)
+
         df_resumo['Mês'] = pd.Categorical(df_resumo['Mês'], categories=[meses_extenso[m] for m in month_order], ordered=True)
         df_resumo = df_resumo.sort_values('Mês') # Ordenar pelo mês
     else:
@@ -149,19 +154,25 @@ st.subheader("Receitas vs Despesas")
 
 # Agrupar receitas por mês
 df_agrupado_receitas = df_receitas_combinadas.groupby("Mês", as_index=False)["Valor total recebido da parcela (R$)"].sum()
-df_agrupado_receitas.rename(columns={"Valor total recebido da parcela (R$)": "Valor_Receita"}, inplace=True)
+df_agrupado_receitas.rename(columns={"Mês": "Mês Original", "Valor total recebido da parcela (R$)": "Valor_Receita"}, inplace=True)
+
 
 # Agrupar despesas por mês
 df_agrupado_despesas = df_despesas_combinadas.groupby("Mês", as_index=False)["Valor total pago da parcela (R$)"].sum()
-df_agrupado_despesas.rename(columns={"Valor total pago da parcela (R$)": "Valor_Despesa"}, inplace=True)
+df_agrupado_despesas.rename(columns={"Mês": "Mês Original", "Valor total pago da parcela (R$)": "Valor_Despesa"}, inplace=True)
+
 
 # Juntar receitas e despesas
-df_agrupado = pd.merge(df_agrupado_receitas, df_agrupado_despesas, on="Mês", how="outer")
-df_agrupado.fillna(0, inplace=True)  #  garante que se algum mês tiver só receita ou só despesa não quebra
+df_agrupado = pd.merge(df_agrupado_receitas, df_agrupado_despesas, on="Mês Original", how="outer")
+df_agrupado.fillna(0, inplace=True)  # garante que se algum mês tiver só receita ou só despesa não quebra
+
+# Adicionar a coluna 'Mês' com nomes por extenso para ordenação e exibição
+df_agrupado['Mês'] = df_agrupado['Mês Original'].map(meses_extenso)
+
 
 # Colocar em formato longo (long format) para o gráfico
 df_agrupado_long = df_agrupado.melt(
-    id_vars="Mês",
+    id_vars=["Mês Original", "Mês"], # Manter ambas as colunas de mês
     value_vars=["Valor_Receita", "Valor_Despesa"],
     var_name="Tipo",
     value_name="Valor"
@@ -173,7 +184,7 @@ df_agrupado_long["Tipo"] = df_agrupado_long["Tipo"].map({
     "Valor_Despesa": "Despesa"
 })
 
-# Ordenar os meses corretamente (se já tiver month_order e meses_extenso definidos)
+# Ordenar os meses corretamente usando a coluna de nomes por extenso
 df_agrupado_long["Mês"] = pd.Categorical(
     df_agrupado_long["Mês"],
     categories=[meses_extenso[m] for m in month_order],
@@ -181,9 +192,13 @@ df_agrupado_long["Mês"] = pd.Categorical(
 )
 df_agrupado_long = df_agrupado_long.sort_values("Mês")
 
-# Gráfico de barras agrupadas (lado a lado)
+
+# Filtrar df_agrupado_long pelos meses selecionados
+df_agrupado_long_filtrado = df_agrupado_long[df_agrupado_long["Mês"].isin(meses_selecionados_extenso)].copy()
+
+# Gráfico de barras agrupadas (lado a lado) - Usar o DataFrame filtrado
 fig2 = px.bar(
-    df_agrupado_long,
+    df_agrupado_long_filtrado, # Use o DataFrame filtrado aqui
     x="Mês",
     y="Valor",
     color="Tipo",
