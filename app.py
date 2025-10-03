@@ -55,11 +55,6 @@ else:
 # Converter a coluna 'Mês' nos DataFrames resumo para categoria com ordem
 for df_resumo in [df_faturamento_mensal, df_cancelamentos_resumo, df_churn_rate_resumo, df_receita_mensal_resumo]: # Added df_receita_mensal_resumo
     if 'Mês' in df_resumo.columns:
-        # Check if the month names in the DataFrame match the keys or values in meses_extenso
-        # If they match keys, map them to values (full names)
-        if all(df_resumo['Mês'].isin(month_order)):
-             df_resumo['Mês'] = df_resumo['Mês'].map(meses_extenso)
-
         df_resumo['Mês'] = pd.Categorical(df_resumo['Mês'], categories=[meses_extenso[m] for m in month_order], ordered=True)
         df_resumo = df_resumo.sort_values('Mês') # Ordenar pelo mês
     else:
@@ -162,12 +157,7 @@ df_agrupado_despesas.rename(columns={"Valor total pago da parcela (R$)": "Valor_
 
 # Juntar receitas e despesas
 df_agrupado = pd.merge(df_agrupado_receitas, df_agrupado_despesas, on="Mês", how="outer")
-df_agrupado.fillna(0, inplace=True)  # garante que se algum mês tiver só receita ou só despesa não quebra
-
-# Adicionar st.write para depurar df_agrupado
-st.write("DataFrame df_agrupado antes de melt:")
-st.write(df_agrupado)
-
+df_agrupado.fillna(0, inplace=True)  #  garante que se algum mês tiver só receita ou só despesa não quebra
 
 # Colocar em formato longo (long format) para o gráfico
 df_agrupado_long = df_agrupado.melt(
@@ -191,17 +181,9 @@ df_agrupado_long["Mês"] = pd.Categorical(
 )
 df_agrupado_long = df_agrupado_long.sort_values("Mês")
 
-# Filtrar df_agrupado_long pelos meses selecionados
-df_agrupado_long_filtrado = df_agrupado_long[df_agrupado_long["Mês"].isin(meses_selecionados_extenso)].copy()
-
-# Adicionar st.write para depurar df_agrupado_long_filtrado
-st.write("DataFrame df_agrupado_long_filtrado antes de plotar:")
-st.write(df_agrupado_long_filtrado)
-
-
-# Gráfico de barras agrupadas (lado a lado) - Usar o DataFrame filtrado
+# Gráfico de barras agrupadas (lado a lado)
 fig2 = px.bar(
-    df_agrupado_long_filtrado, # Use o DataFrame filtrado aqui
+    df_agrupado_long,
     x="Mês",
     y="Valor",
     color="Tipo",
