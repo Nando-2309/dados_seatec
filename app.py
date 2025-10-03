@@ -157,7 +157,7 @@ df_agrupado_despesas.rename(columns={"Valor total pago da parcela (R$)": "Valor_
 
 # Juntar receitas e despesas
 df_agrupado = pd.merge(df_agrupado_receitas, df_agrupado_despesas, on="Mês", how="outer")
-df_agrupado.fillna(0, inplace=True)  # garante que se algum mês tiver só receita ou só despesa não quebra
+df_agrupado.fillna(0, inplace=True)  #  garante que se algum mês tiver só receita ou só despesa não quebra
 
 # Colocar em formato longo (long format) para o gráfico
 df_agrupado_long = df_agrupado.melt(
