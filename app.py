@@ -112,14 +112,22 @@ df_filtrado = df_combined[df_combined["Mês"].isin(meses_selecionados_original)]
 # --- Página principal ---
 st.title("📊 Dados da Seatec")
 
-
-## Gráfico 1 - Faturamento Bruto (usando df_receita_mensal_resumo ordenado)
+## Gráfico 1 - Faturamento Bruto (usando df_receita_mensal_resumo)
 st.subheader("Faturamento Bruto")
-# Modificado para gráfico de barras horizontal e colorido
-# Use df_receita_mensal_resumo which should contain the summed monthly revenue
-fig1 = px.bar(df_receita_mensal_resumo, x="Valor total recebido da parcela (R$)", y="Mês", orientation='h',
-              title="Faturamento Bruto Mensal", color="Mês")
-st.plotly_chart(fig1, use_container_width=True)
+
+if "Mês" in df_receita_mensal_resumo.columns and "Valor total recebido da parcela (R$)" in df_receita_mensal_resumo.columns:
+    fig1 = px.bar(
+        df_receita_mensal_resumo,
+        x="Valor total recebido da parcela (R$)",
+        y="Mês",
+        orientation='h',
+        title="Faturamento Bruto Mensal",
+        color="Mês"
+    )
+    st.plotly_chart(fig1, use_container_width=True)
+else:
+    st.warning("⚠️ Verifique os nomes das colunas na aba 'Receita Mensal Resumo' do Excel.")
+
 
 
 ## Gráfico 2 - Ticket Médio (usando ticket_medio_mensalidades calculado in-app)
