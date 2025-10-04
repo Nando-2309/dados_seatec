@@ -210,12 +210,14 @@ if not df_churn_rate_filtrado.empty:
     df_churn_rate_filtrado['Churn Rate (%)'] = pd.to_numeric(df_churn_rate_filtrado['Churn Rate (%)'], errors='coerce')
     df_churn_rate_filtrado.dropna(subset=['Churn Rate (%)'], inplace=True) # Remover linhas com valores NaN após coerção
 
-    total_churn = df_churn_rate_filtrado['Churn Rate (%)'].sum()
-    if total_churn > 0:
-        # Calculate percentages based on the values in the DataFrame
-        # Use a coluna correta para calcular os percentuais
-        churn_rate_percentages = [f'{(val / total_churn):.1%}' for val in df_churn_rate_filtrado['Churn Rate (%)'].values]
-        fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_percentages) # Use percent+label to show both
+    # Calcular o total de churn para os meses selecionados
+    total_churn_filtrado = df_churn_rate_filtrado['Churn Rate (%)'].sum()
+
+    if total_churn_filtrado > 0:
+        # Calcular percentuais baseados nos valores FILTRADOS
+        churn_rate_percentages = [f'{(val / total_churn_filtrado):.1%}' for val in df_churn_rate_filtrado['Churn Rate (%)'].values]
+        # Usar 'text' para exibir apenas o texto personalizado e 'textinfo' para a posição
+        fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_percentages)
     else:
          fig5.update_traces(textinfo='label+value', insidetextorientation='radial') # Show only label and value if total is zero or null
 
@@ -250,6 +252,7 @@ if not df_clientes_cancelados_detalhe_filtrado.empty:
     if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe_filtrado.columns:
         fig6 = px.box(df_clientes_cancelados_detalhe_filtrado, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
                   title='Cancelamentos Mês a Mês - Distribuição de Valores',
+                  color='Mês Nome Extenso', # Adicionado para colorir por mês
                   category_orders={'Mês Nome Extenso': meses_selecionados_extenso}) # Order the months
 
         st.plotly_chart(fig6, use_container_width=True)
@@ -258,7 +261,7 @@ if not df_clientes_cancelados_detalhe_filtrado.empty:
 elif meses_selecionados_extenso: # Show message only if months are selected but no data
     st.warning("Dados de clientes cancelados não disponíveis para os meses selecionados.")
 else: # Show message if no months are selected
-    st.info("Selecione os meses na barra lateral para ver os dados de cancelamentos.")
+    st.info("Selecione os meses na barra lateral para ver os detalhes dos cancelamentos.")
 
 
 # --- Rodapé com dados detalhados ---
