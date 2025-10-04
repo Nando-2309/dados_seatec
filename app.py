@@ -144,24 +144,33 @@ else:
     st.warning("Dados de ticket médio não disponíveis para os meses selecionados.")
 
 
-## Gráfico 3 - Receitas vs Despesas
+# --- Gráfico 3: Receitas vs Despesas ---
+
 st.subheader("Receitas vs Despesas")
 
 # Agrupar receitas por mês
 df_agrupado_receitas = df_receitas_combinadas.groupby("Mês", as_index=False)["Valor total recebido da parcela (R$)"].sum()
 df_agrupado_receitas.rename(columns={"Valor total recebido da parcela (R$)": "Valor_Receita"}, inplace=True)
 
+# 🔧 Mapear os nomes dos meses para o formato com inicial maiúscula
+df_agrupado_receitas["Mês"] = df_agrupado_receitas["Mês"].map(meses_extenso)
+
 # Agrupar despesas por mês
 df_agrupado_despesas = df_despesas_combinadas.groupby("Mês", as_index=False)["Valor total pago da parcela (R$)"].sum()
 df_agrupado_despesas.rename(columns={"Valor total pago da parcela (R$)": "Valor_Despesa"}, inplace=True)
 
+# 🔧 Mapear também os meses das despesas
+df_agrupado_despesas["Mês"] = df_agrupado_despesas["Mês"].map(meses_extenso)
+
 # Juntar receitas e despesas
 df_agrupado = pd.merge(df_agrupado_receitas, df_agrupado_despesas, on="Mês", how="outer")
-df_agrupado.fillna(0, inplace=True)  #  garante que se algum mês tiver só receita ou só despesa não quebra
+df_agrupado.fillna(0, inplace=True)  # Substituir NaN por 0 se algum mês tiver só receita ou despesa
 
-st.write("Receitas agrupadas por mês:")
-st.write(df_agrupado_receitas)
-# Colocar em formato longo (long format) para o gráfico
+# 🔧 Garantir a ordem correta dos meses
+df_agrupado["Mês"] = pd.Categorical(df_agrupado["Mês"], categories=[meses_extenso[m] for m in month_order], ordered=True)
+df_agrupado = df_agrupado.sort_values("Mês")
+
+# Transformar em formato longo para plotly express
 df_agrupado_long = df_agrupado.melt(
     id_vars="Mês",
     value_vars=["Valor_Receita", "Valor_Despesa"],
@@ -169,22 +178,14 @@ df_agrupado_long = df_agrupado.melt(
     value_name="Valor"
 )
 
-# Mapear nomes bonitos
+# Mapear para nomes mais legíveis no gráfico
 df_agrupado_long["Tipo"] = df_agrupado_long["Tipo"].map({
     "Valor_Receita": "Receita",
     "Valor_Despesa": "Despesa"
 })
 
-# Ordenar os meses corretamente (se já tiver month_order e meses_extenso definidos)
-df_agrupado_long["Mês"] = pd.Categorical(
-    df_agrupado_long["Mês"],
-    categories=[meses_extenso[m] for m in month_order],
-    ordered=True
-)
-df_agrupado_long = df_agrupado_long.sort_values("Mês")
-
 # Gráfico de barras agrupadas (lado a lado)
-fig2 = px.bar(
+fig3 = px.bar(
     df_agrupado_long,
     x="Mês",
     y="Valor",
@@ -195,7 +196,7 @@ fig2 = px.bar(
     color_discrete_map={"Receita": "blue", "Despesa": "red"}
 )
 
-st.plotly_chart(fig2, use_container_width=True)
+st.plotly_chart(fig3, use_container_width=True)
 
 
 ## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado)
