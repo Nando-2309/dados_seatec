@@ -36,24 +36,12 @@ meses_extenso = {
 }
 month_order_capitalized = [meses_extenso[m] for m in month_order_original] # Ordem dos meses capitalizados
 
-# Renomear a coluna do índice para 'Mês' nos dataframes resumo que podem tê-la como índice
-for df_resumo in [df_cancelamentos_resumo, df_churn_rate_resumo, df_receita_mensal_resumo, df_ticket_medio_mensal_resumo]:
-    if df_resumo.index.name is not None and df_resumo.index.name != 'Mês':
-         df_resumo.index.rename('Mês', inplace=True)
-         df_resumo.reset_index(inplace=True)
-    # Garantir que a coluna Mês está em português (capitalizada) para exibição e ordenação
+# Aplicar ordenação categórica aos DataFrames carregados inicialmente
+for df_resumo in [df_faturamento_mensal, df_cancelamentos_resumo, df_churn_rate_resumo, df_receita_mensal_resumo, df_ticket_medio_mensal_resumo]:
     if 'Mês' in df_resumo.columns:
         df_resumo['Mês'] = df_resumo['Mês'].map(meses_extenso).fillna(df_resumo['Mês']) # Mapeia se for o nome original, senão mantém
         df_resumo['Mês'] = pd.Categorical(df_resumo['Mês'], categories=month_order_capitalized, ordered=True)
         df_resumo = df_resumo.sort_values('Mês') # Ordenar pelo mês
-
-
-# Garantir que a coluna 'Mês' no df_faturamento_mensal esteja em português (capitalizada) e ordenada
-if 'Mês' in df_faturamento_mensal.columns:
-    df_faturamento_mensal['Mês'] = df_faturamento_mensal['Mês'].map(meses_extenso).fillna(df_faturamento_mensal['Mês'])
-    df_faturamento_mensal['Mês'] = pd.Categorical(df_faturamento_mensal['Mês'], categories=month_order_capitalized, ordered=True)
-    df_faturamento_mensal = df_faturamento_mensal.sort_values('Mês')
-
 
 # Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe esteja em português (capitalizada) para o boxplot
 if 'Mês' in df_clientes_cancelados_detalhe.columns:
@@ -77,10 +65,27 @@ df_churn_rate_filtrado = df_churn_rate_resumo[df_churn_rate_resumo['Mês'].isin(
 df_receita_mensal_filtrado = df_receita_mensal_resumo[df_receita_mensal_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
 df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_resumo[df_ticket_medio_mensal_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
 
-# Garantir que o DataFrame de ticket médio filtrado também esteja ordenado pelos meses selecionados
+# *** Aplicar ordenação categórica aos DataFrames FILTRADOS antes de plotar ***
+
+# Garantir que o DataFrame de receita mensal filtrado esteja ordenado pelos meses selecionados
+if not df_receita_mensal_filtrado.empty:
+    df_receita_mensal_filtrado['Mês'] = pd.Categorical(df_receita_mensal_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
+    df_receita_mensal_filtrado = df_receita_mensal_filtrado.sort_values('Mês')
+
+# Garantir que o DataFrame de ticket médio filtrado esteja ordenado pelos meses selecionados
 if not df_ticket_medio_mensal_filtrado.empty:
     df_ticket_medio_mensal_filtrado['Mês'] = pd.Categorical(df_ticket_medio_mensal_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
     df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_filtrado.sort_values('Mês')
+
+# Garantir que o DataFrame de faturamento filtrado esteja ordenado pelos meses selecionados
+if not df_faturamento_filtrado.empty:
+     df_faturamento_filtrado['Mês'] = pd.Categorical(df_faturamento_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
+     df_faturamento_filtrado = df_faturamento_filtrado.sort_values('Mês')
+
+# Garantir que o DataFrame de churn rate filtrado esteja ordenado pelos meses selecionados
+if not df_churn_rate_filtrado.empty:
+     df_churn_rate_filtrado['Mês'] = pd.Categorical(df_churn_rate_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
+     df_churn_rate_filtrado = df_churn_rate_filtrado.sort_values('Mês')
 
 
 # Filtrar detalhes dos clientes cancelados pelos meses selecionados (comparando com a coluna de mês original)
