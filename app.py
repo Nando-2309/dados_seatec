@@ -11,15 +11,13 @@ st.set_page_config(layout="wide")
 file_path = "todos_resultados_seatec.xlsx"
 
 try:
-    df_receitas_combinadas = pd.read_excel(file_path, sheet_name="Receitas Combinadas")
-    df_despesas_combinadas = pd.read_excel(file_path, sheet_name="Despesas Combinadas")
+    # Carregar os DataFrames que contêm os dados já processados e resumidos
     df_faturamento_mensal = pd.read_excel(file_path, sheet_name="Faturamento Mensal")
-    # Load other sheets as needed for your calculations and visualizations
     df_cancelamentos_resumo = pd.read_excel(file_path, sheet_name="Cancelamentos Resumo")
     df_churn_rate_resumo = pd.read_excel(file_path, sheet_name="Churn Rate Resumo")
-    df_clientes_cancelados_detalhe = pd.read_excel(file_path, sheet_name="Clientes Cancelados Detalhe") # Carregar detalhes dos cancelados
-    df_receita_mensal_resumo = pd.read_excel(file_path, sheet_name="Receita Mensal Resumo") # Load Receita Mensal Resumo
-
+    df_clientes_cancelados_detalhe = pd.read_excel(file_path, sheet_name="Clientes Cancelados Detalhe")
+    df_receita_mensal_resumo = pd.read_excel(file_path, sheet_name="Receita Mensal Resumo")
+    df_ticket_medio_mensal_resumo = pd.read_excel(file_path, sheet_name="Ticket Medio Mensal Resumo") # Carregar o ticket médio resumido
 
 except FileNotFoundError:
     st.error(f"Erro: O arquivo {file_path} não foi encontrado. Certifique-se de que o arquivo está no diretório correto.")
@@ -30,195 +28,148 @@ except Exception as e:
 
 
 # --- Preparar dados ---
-# Adicionar coluna 'Tipo' aos DataFrames de receitas e despesas antes de concatenar
-df_receitas_combinadas["Tipo"] = "Receita"
-df_despesas_combinadas["Tipo"] = "Despesa"
-
-
-# Concatenar receitas e despesas para o filtro de mês
-df_combined = pd.concat([df_receitas_combinadas, df_despesas_combinadas], ignore_index=True)
-
-
-# Mapeamento meses por extenso para ordenação
-month_order = ['abril', 'maio', 'junho', 'julho', 'agosto'] # Ajuste conforme seus dados
+# Mapeamento meses por extenso para ordenação e exibição
+month_order_original = ['abril', 'maio', 'junho', 'julho', 'agosto'] # Ordem original dos meses
 meses_extenso = {
     'abril': 'Abril', 'maio': 'Maio', 'junho': 'Junho',
     'julho': 'Julho', 'agosto': 'Agosto'
 }
+month_order_capitalized = [meses_extenso[m] for m in month_order_original] # Ordem dos meses capitalizados
 
-
-
-# Garantir que a coluna 'Mês' esteja presente e usar o mapeamento
-if 'Mês' in df_combined.columns:
-    df_combined['Mês Nome Extenso'] = df_combined['Mês'].map(meses_extenso)
-else:
-    st.error("Coluna 'Mês' não encontrada no DataFrame combinado.")
-    st.stop()
-
-# Converter a coluna 'Mês' nos DataFrames resumo para categoria com ordem
-for df_resumo in [df_faturamento_mensal, df_cancelamentos_resumo, df_churn_rate_resumo, df_receita_mensal_resumo]: # Added df_receita_mensal_resumo
+# Renomear a coluna do índice para 'Mês' nos dataframes resumo que podem tê-la como índice
+for df_resumo in [df_cancelamentos_resumo, df_churn_rate_resumo, df_receita_mensal_resumo, df_ticket_medio_mensal_resumo]:
+    if df_resumo.index.name is not None and df_resumo.index.name != 'Mês':
+         df_resumo.index.rename('Mês', inplace=True)
+         df_resumo.reset_index(inplace=True)
+    # Garantir que a coluna Mês está em português (capitalizada) para exibição e ordenação
     if 'Mês' in df_resumo.columns:
-        df_resumo['Mês'] = pd.Categorical(df_resumo['Mês'], categories=[meses_extenso[m] for m in month_order], ordered=True)
+        df_resumo['Mês'] = df_resumo['Mês'].map(meses_extenso).fillna(df_resumo['Mês']) # Mapeia se for o nome original, senão mantém
+        df_resumo['Mês'] = pd.Categorical(df_resumo['Mês'], categories=month_order_capitalized, ordered=True)
         df_resumo = df_resumo.sort_values('Mês') # Ordenar pelo mês
-    else:
-         st.warning(f"Coluna 'Mês' não encontrada no DataFrame resumo: {df_resumo}")
 
 
-# Re-calculate ticket medio inside the Streamlit app using the original logic
-# Filter the combined DataFrame to include only monthly fees (TC and S8) in any Category column
-mensalidades_df = df_combined[
-    (df_combined['Categoria 1'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE'])) |
-    (df_combined['Categoria 2'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE'])) |
-    (df_combined['Categoria 3'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE'])) |
-    (df_combined['Categoria 4'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE'])) |
-    (df_combined['Categoria 5'].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE']))
-].copy() # Adicionado .copy() para evitar SettingWithCopyWarning
+# Garantir que a coluna 'Mês' no df_faturamento_mensal esteja em português (capitalizada) e ordenada
+if 'Mês' in df_faturamento_mensal.columns:
+    df_faturamento_mensal['Mês'] = df_faturamento_mensal['Mês'].map(meses_extenso).fillna(df_faturamento_mensal['Mês'])
+    df_faturamento_mensal['Mês'] = pd.Categorical(df_faturamento_mensal['Mês'], categories=month_order_capitalized, ordered=True)
+    df_faturamento_mensal = df_faturamento_mensal.sort_values('Mês')
 
-# Create a new column with the total monthly fee per row
-# Initialize the column with 0
-mensalidades_df['Valor Total Mensalidade'] = 0.0
 
-# Sum the monthly fee values in each Category column where the category matches
-for i in range(1, 6):
-    categoria_col = f'Categoria {i}'
-    valor_col = f'Valor na Categoria {i}'
-    # Use .loc to avoid SettingWithCopyWarning
-    mensalidades_df.loc[mensalidades_df[categoria_col].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE']), 'Valor Total Mensalidade'] += \
-        mensalidades_df.loc[mensalidades_df[categoria_col].isin(['MENSALIDADE TC', 'MENSALIDADE S8','MENSALIDADE TC - PRO RATA OU PGTO. FINAL', 'MENSALIDADE S8 - PRO RATA OU PGTO. FINAL', 'MENSALIDADE SITE', 'CONTRATO DE MANUTENÇÃO HARDWARE']), valor_col].fillna(0)
-
-# Calculate the monthly average ticket using the new 'Valor Total Mensalidade' column
-# Group the filtered DataFrame by month and calculate the mean of the new column
-ticket_medio_mensalidades = mensalidades_df.groupby('Mês')['Valor Total Mensalidade'].mean().reset_index() # Reset index to make 'Mês' a column
-
-# Ensure the 'Mês' column in ticket_medio_mensalidades is in categorical format with the correct order and mapped to full names
-ticket_medio_mensalidades['Mês Nome Extenso'] = ticket_medio_mensalidades['Mês'].map(meses_extenso)
-ticket_medio_mensalidades['Mês Nome Extenso'] = pd.Categorical(ticket_medio_mensalidades['Mês Nome Extenso'], categories=[meses_extenso[m] for m in month_order], ordered=True)
-ticket_medio_mensalidades = ticket_medio_mensalidades.sort_values('Mês Nome Extenso') # Sort by full month name
+# Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe esteja em português (capitalizada) para o boxplot
+if 'Mês' in df_clientes_cancelados_detalhe.columns:
+    df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
+    # Não precisa categorizar e ordenar aqui, pois o Plotly Express fará isso com base em category_orders
 
 
 # --- Sidebar com filtro de mês ---
 st.sidebar.header("🔍 Filtros") # Adicionado ícone de lupa
 
-# Obter meses disponíveis do DataFrame combinado e usar os nomes por extenso para o filtro
-meses_disponiveis_extenso = [meses_extenso[m] for m in month_order if m in df_combined['Mês'].unique()]
+# Obter meses disponíveis do DataFrame de faturamento (já capitalizado e ordenado)
+meses_disponiveis_extenso = df_faturamento_mensal['Mês'].unique().tolist()
 
 # Multi-select para meses com todos selecionados por padrão
 meses_selecionados_extenso = st.sidebar.multiselect("Selecione o(s) mês(es):", meses_disponiveis_extenso, default=meses_disponiveis_extenso)
 
-# Mapear os meses selecionados de volta para o formato original (abril, maio, etc.) para filtrar
-meses_selecionados_original = [k for k, v in meses_extenso.items() if v in meses_selecionados_extenso]
+# Filtrar DataFrames resumo pelos meses selecionados (comparando com a coluna de mês capitalizado)
+df_faturamento_filtrado = df_faturamento_mensal[df_faturamento_mensal['Mês'].isin(meses_selecionados_extenso)].copy()
+df_cancelamentos_filtrado = df_cancelamentos_resumo[df_cancelamentos_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
+df_churn_rate_filtrado = df_churn_rate_resumo[df_churn_rate_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
+df_receita_mensal_filtrado = df_receita_mensal_resumo[df_receita_mensal_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
+df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_resumo[df_ticket_medio_mensal_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
 
-# Filtrar dados combinados pelos meses selecionados
-df_filtrado = df_combined[df_combined["Mês"].isin(meses_selecionados_original)].copy() # Usar .copy() para evitar SettingWithCopyWarning
+
+# Filtrar detalhes dos clientes cancelados pelos meses selecionados (comparando com a coluna de mês original)
+meses_selecionados_original = [k for k, v in meses_extenso.items() if v in meses_selecionados_extenso]
+df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy()
 
 
 # --- Página principal ---
 st.title("📊 Dados da Seatec")
 
-## Gráfico 1 - Faturamento Bruto (usando df_faturamento_mensal ordenado)
+## Gráfico 1 - Faturamento Bruto (usando df_receita_mensal_filtrado)
 st.subheader("Faturamento Bruto")
+if not df_receita_mensal_filtrado.empty:
+    # Renomear a coluna de valor para um nome mais descritivo para o gráfico
+    df_receita_mensal_filtrado.rename(columns={'Valor total recebido da parcela (R$)': 'Valor Receita Total (R$)'}, inplace=True)
+    fig1 = px.bar(
+        df_receita_mensal_filtrado,
+        x="Valor Receita Total (R$)",
+        y="Mês",
+        orientation='h',
+        title="Faturamento Bruto Mensal",
+        color="Mês",
+        category_orders={"Mês": meses_selecionados_extenso} # Garantir a ordem correta no gráfico
+    )
+    st.plotly_chart(fig1, use_container_width=True)
+else:
+    st.warning("Dados de faturamento bruto não disponíveis para os meses selecionados.")
 
-fig1 = px.bar(
-    df_faturamento_mensal,
-    x="Valor_Receita",  # <- Confirme se no Excel está escrito exatamente assim
-    y="Mês",
-    orientation='h',
-    title="Faturamento Bruto Mensal",
-    color="Mês"
-)
-st.plotly_chart(fig1, use_container_width=True)
 
-## Gráfico 2 - Ticket Médio (usando ticket_medio_mensalidades calculado in-app)
+## Gráfico 2 - Ticket Médio (usando df_ticket_medio_mensal_filtrado)
 st.subheader("Ticket Médio Mensal")
 
-# Check if the DataFrame is not empty before plotting
-if not ticket_medio_mensalidades.empty:
-    # Create a line chart using go.Scatter
-    fig2 = go.Figure(data=go.Scatter(x=ticket_medio_mensalidades['Mês Nome Extenso'], y=ticket_medio_mensalidades['Valor Total Mensalidade'], mode='lines+markers'))
+if not df_ticket_medio_mensal_filtrado.empty:
+    # Renomear a coluna de valor para um nome mais descritivo para o gráfico
+     df_ticket_medio_mensal_filtrado.rename(columns={'Valor Total Mensalidade': 'Ticket Médio Mensalidade (R$)'}, inplace=True)
+    # Criar um gráfico de linha usando Plotly Go (ou Plotly Express para simplicidade)
+     fig2 = px.line(df_ticket_medio_mensal_filtrado, x='Mês', y='Ticket Médio Mensalidade (R$)', markers=True)
 
-    # Update layout for the line chart
-    fig2.update_layout(
-        title='Ticket Médio Mensal',
-        xaxis_title='Mês',
-        yaxis_title='Ticket Médio (R$)'
-    )
-    st.plotly_chart(fig2, use_container_width=True)
+     fig2.update_layout(
+         title='Ticket Médio Mensal',
+         xaxis_title='Mês',
+         yaxis_title='Ticket Médio (R$)',
+         xaxis={'categoryorder':'array', 'categoryarray': meses_selecionados_extenso} # Garantir a ordem no eixo X
+     )
+     st.plotly_chart(fig2, use_container_width=True)
 else:
     st.warning("Dados de ticket médio não disponíveis para os meses selecionados.")
 
-# --- Gráfico: Receitas vs Despesas ---
+
+# --- Gráfico: Receitas vs Despesas (usando df_faturamento_filtrado) ---
 st.subheader("Receitas vs Despesas")
 
-# Lista dos meses em ordem correta (em minúsculo como está no seu dataset)
-month_order = ['abril', 'maio', 'junho', 'julho', 'agosto']
+# Criar um DataFrame no formato longo para o gráfico de barras agrupado
+if not df_faturamento_filtrado.empty:
+    df_receitas_despesas_long = df_faturamento_filtrado.melt(
+        id_vars="Mês",
+        value_vars=["Valor_Receita", "Valor_Despesa"],
+        var_name="Tipo",
+        value_name="Valor"
+    )
 
-# Criar dicionário para transformar nomes dos meses para capitalizados
-meses_extenso = {
-    "janeiro": "Janeiro", "fevereiro": "Fevereiro", "março": "Março",
-    "abril": "Abril", "maio": "Maio", "junho": "Junho",
-    "julho": "Julho", "agosto": "Agosto", "setembro": "Setembro",
-    "outubro": "Outubro", "novembro": "Novembro", "dezembro": "Dezembro"
-}
-
-# Mapear nome do mês capitalizado (para gráfico bonito)
-df_receitas_combinadas["Mês Nome Extenso"] = df_receitas_combinadas["Mês"].map(meses_extenso)
-df_despesas_combinadas["Mês Nome Extenso"] = df_despesas_combinadas["Mês"].map(meses_extenso)
-
-# --- Agrupar Receitas ---
-df_receitas_agg = df_receitas_combinadas.groupby("Mês Nome Extenso", as_index=False)["Valor total recebido da parcela (R$)"].sum()
-df_receitas_agg.rename(columns={"Valor total recebido da parcela (R$)": "Valor_Receita"}, inplace=True)
-
-# --- Agrupar Despesas ---
-df_despesas_agg = df_despesas_combinadas.groupby("Mês Nome Extenso", as_index=False)["Valor total pago da parcela (R$)"].sum()
-df_despesas_agg.rename(columns={"Valor total pago da parcela (R$)": "Valor_Despesa"}, inplace=True)
-
-# Tornar as despesas positivas para comparação visual
-df_despesas_agg["Valor_Despesa"] = df_despesas_agg["Valor_Despesa"].abs()
-
-# --- Juntar Receitas + Despesas ---
-df_agrupado = pd.merge(df_receitas_agg, df_despesas_agg, on="Mês Nome Extenso", how="outer").fillna(0)
-
-# Ordenar os meses de forma correta
-ordem_capitalizada = [meses_extenso[m] for m in month_order]  # ex: ['Abril', 'Maio', ...]
-df_agrupado["Mês Nome Extenso"] = pd.Categorical(df_agrupado["Mês Nome Extenso"], categories=ordem_capitalizada, ordered=True)
-df_agrupado = df_agrupado.sort_values("Mês Nome Extenso")
-
-# --- Formato longo para gráfico ---
-df_long = df_agrupado.melt(
-    id_vars="Mês Nome Extenso",
-    value_vars=["Valor_Receita", "Valor_Despesa"],
-    var_name="Tipo",
-    value_name="Valor"
-)
-
-# Ajustar labels
-df_long["Tipo"] = df_long["Tipo"].replace({
-    "Valor_Receita": "Receita",
-    "Valor_Despesa": "Despesa"
-})
-
-# --- Criar gráfico ---
-fig = px.bar(
-    df_long,
-    x="Mês Nome Extenso",
-    y="Valor",
-    color="Tipo",
-    barmode="group",
-    title="Receitas vs Despesas por Mês",
-    labels={"Valor": "Valor (R$)", "Mês Nome Extenso": "Mês"}
-)
-
-st.plotly_chart(fig, use_container_width=True)
+    # Mapear 'Tipo' para nomes mais amigáveis e garantir que as despesas sejam positivas para o gráfico
+    df_receitas_despesas_long['Tipo'] = df_receitas_despesas_long['Tipo'].map({
+        'Valor_Receita': 'Receita',
+        'Valor_Despesa': 'Despesa'
+    })
+    # Certificar que os valores de Despesa são positivos para o gráfico de barras
+    df_receitas_despesas_long.loc[df_receitas_despesas_long['Tipo'] == 'Despesa', 'Valor'] = df_receitas_despesas_long.loc[df_receitas_despesas_long['Tipo'] == 'Despesa', 'Valor'].abs()
 
 
-## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado)
+    # Criar o gráfico de barras agrupado
+    fig3 = px.bar(
+        df_receitas_despesas_long,
+        x="Mês",
+        y="Valor",
+        color="Tipo",
+        barmode="group", # Agrupar as barras lado a lado
+        title="Receitas vs Despesas por Mês",
+        labels={"Valor": "Valor (R$)", "Mês": "Mês"},
+        color_discrete_map={'Receita': 'blue', 'Despesa': 'red'}, # Definir cores
+        category_orders={"Mês": meses_selecionados_extenso} # Garantir a ordem correta no gráfico
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+else:
+     st.warning("Dados de receitas e despesas não disponíveis para os meses selecionados.")
+
+
+## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_filtrado)
 st.subheader("Lucratividade Mensal")
-# Criando o gráfico de barras e linha sobreposta usando Plotly Go
-# Usar o df_faturamento_mensal que já está ordenado por Mês (feito na preparação dos dados)
-if not df_faturamento_mensal.empty:
+if not df_faturamento_filtrado.empty:
+    # Criando o gráfico de barras e linha sobreposta usando Plotly Go
     fig4 = go.Figure(data=[
-        go.Bar(name='Faturamento', x=df_faturamento_mensal['Mês'], y=df_faturamento_mensal['Faturamento'], marker_color='blue'),
-        go.Scatter(name='Evolução da Lucratividade', x=df_faturamento_mensal['Mês'], y=df_faturamento_mensal['Faturamento'], mode='lines+markers', line=dict(color='purple', width=4), marker=dict(color='purple', size=6))
+        go.Bar(name='Faturamento', x=df_faturamento_filtrado['Mês'], y=df_faturamento_filtrado['Faturamento'], marker_color='blue'),
+        go.Scatter(name='Evolução da Lucratividade', x=df_faturamento_filtrado['Mês'], y=df_faturamento_filtrado['Faturamento'], mode='lines+markers', line=dict(color='purple', width=4), marker=dict(color='purple', size=6))
     ])
 
     # Atualizando o layout
@@ -226,31 +177,34 @@ if not df_faturamento_mensal.empty:
         title='Lucratividade Mensal (R$)',
         xaxis_title='Mês',
         yaxis_title='Faturamento (R$)',
-        xaxis_tickangle=45,
+        xaxis={'categoryorder':'array', 'categoryarray': meses_selecionados_extenso}, # Garantir a ordem no eixo X
         barmode='overlay' # Para sobrepor a linha nas barras
     )
     st.plotly_chart(fig4, use_container_width=True)
 else:
-    st.warning("Dados de faturamento mensal não disponíveis.")
+    st.warning("Dados de lucratividade mensal não disponíveis para os meses selecionados.")
 
 
-## Gráfico 5 - Churn Rate (usando df_churn_rate_resumo ordenado)
+## Gráfico 5 - Churn Rate (usando df_churn_rate_filtrado)
 st.subheader("Taxa de Rotatividade (Churn Rate) Mensal")
-# Adicionado gráfico de pizza para Churn Rate
-# O nome da coluna no excel sheet "Churn Rate Resumo" para os valores é 'Identificador do cliente'
-if not df_churn_rate_resumo.empty:
-    fig5 = px.pie(df_churn_rate_resumo, values='Identificador do cliente', names='Mês',
+if not df_churn_rate_filtrado.empty:
+    # O nome da coluna no excel sheet "Churn Rate Resumo" para os valores é 'Identificador do cliente' (que representa a taxa)
+    # Renomear a coluna de valor para um nome mais descritivo para o gráfico
+    df_churn_rate_filtrado.rename(columns={'Identificador do cliente': 'Churn Rate (%)'}, inplace=True)
+
+    fig5 = px.pie(df_churn_rate_filtrado, values='Churn Rate (%)', names='Mês',
              title='Taxa de Rotatividade (Churn Rate) por Mês')
 
     # Atualiza os traços para mostrar o percentual real de churn rate para cada mês
-    # Precisamos formatar os valores de churn rate como strings com '%'
-    # Certifique-se que a coluna de valores no df_churn_rate_resumo é a correta para o cálculo do percentual na pizza
-    # Assumindo que 'Identificador do cliente' no df_churn_rate_resumo representa o valor para o cálculo do percentual
-    # Verifique se a soma dos valores é maior que zero para evitar divisão por zero
-    total_churn = df_churn_rate_resumo['Identificador do cliente'].sum()
+    # Certifique-se que a coluna de valores é numérica para o cálculo do percentual na pizza
+    df_churn_rate_filtrado['Churn Rate (%)'] = pd.to_numeric(df_churn_rate_filtrado['Churn Rate (%)'], errors='coerce')
+    df_churn_rate_filtrado.dropna(subset=['Churn Rate (%)'], inplace=True) # Remover linhas com valores NaN após coerção
+
+    total_churn = df_churn_rate_filtrado['Churn Rate (%)'].sum()
     if total_churn > 0:
         # Calculate percentages based on the values in the DataFrame
-        churn_rate_percentages = [f'{(val / total_churn):.1%}' for val in df_churn_rate_resumo['Identificador do cliente'].values]
+        # Use a coluna correta para calcular os percentuais
+        churn_rate_percentages = [f'{(val / total_churn):.1%}' for val in df_churn_rate_filtrado['Churn Rate (%)'].values]
         fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_percentages) # Use percent+label to show both
     else:
          fig5.update_traces(textinfo='label+value', insidetextorientation='radial') # Show only label and value if total is zero or null
@@ -274,79 +228,108 @@ if not df_churn_rate_resumo.empty:
     )
     st.plotly_chart(fig5, use_container_width=True)
 else:
-    st.warning("Dados de Churn Rate não disponíveis.")
+    st.warning("Dados de Churn Rate não disponíveis para os meses selecionados.")
 
 
-## Gráfico 6 - Cancelamentos (usando df_clientes_cancelados_detalhe e df_cancelamentos_resumo)
+## Gráfico 6 - Cancelamentos (usando df_clientes_cancelados_detalhe_filtrado)
 st.subheader("Cancelamentos Mês a Mês")
-# Added boxplot for Cancellations
-# Use df_clientes_cancelados_detalhe for the boxplot, which contains the individual values per cancellation
-# Map the original month to the full name for the X axis
-if 'Mês' in df_clientes_cancelados_detalhe.columns:
-    df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
 
+if not df_clientes_cancelados_detalhe_filtrado.empty:
     # Create the boxplot using Plotly Express
     # Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
-    if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe.columns and not df_clientes_cancelados_detalhe.empty:
-        fig6 = px.box(df_clientes_cancelados_detalhe, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
+    if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe_filtrado.columns:
+        fig6 = px.box(df_clientes_cancelados_detalhe_filtrado, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
                   title='Cancelamentos Mês a Mês - Distribuição de Valores',
-                  category_orders={'Mês Nome Extenso': [meses_extenso[m] for m in month_order]}) # Order the months
+                  category_orders={'Mês Nome Extenso': meses_selecionados_extenso}) # Order the months
 
         st.plotly_chart(fig6, use_container_width=True)
-    elif df_clientes_cancelados_detalhe.empty:
-        st.warning("Dados de clientes cancelados não disponíveis para o boxplot.")
     else:
         st.warning("Coluna 'Valor total recebido da parcela (R$)' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
-else:
-    st.warning("Coluna 'Mês' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
-
+elif meses_selecionados_extenso: # Show message only if months are selected but no data
+    st.warning("Dados de clientes cancelados não disponíveis para os meses selecionados.")
+else: # Show message if no months are selected
+    st.info("Selecione os meses na barra lateral para ver os dados de cancelamentos.")
 
 
 # --- Rodapé com dados detalhados ---
 st.subheader(f"📑 Dados Detalhados dos Meses Selecionados")
 
-# Exibir apenas as colunas relevantes e renomeá-las para melhor visualização, se necessário
-colunas_detalhes = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Categoria 1', 'Valor na Categoria 1', 'Mês Nome Extenso'] # Exemplo
+# Combina os DataFrames de receitas e despesas filtrados para exibir os detalhes
+# Precisamos carregar os DataFrames originais de receitas e despesas combinadas para filtrar e exibir
+# Como não temos os DataFrames combinados originais carregados no Streamlit,
+# vamos readaptar para carregar e filtrar aqui ou assumir que df_combined foi carregado
+# (Assumindo que df_combined foi criado anteriormente no notebook e salvo no excel sheet "Receitas Combinadas" e "Despesas Combinadas")
+# Se você não tem o df_combined original salvo, você precisará carregar os sheets e concatenar
+# Aqui, vamos carregar os sheets combinados do excel file
+try:
+    df_receitas_combinadas_full = pd.read_excel(file_path, sheet_name="Receitas Combinadas")
+    df_despesas_combinadas_full = pd.read_excel(file_path, sheet_name="Despesas Combinadas")
 
-# Check if df_filtrado is not empty before selecting columns
-if not df_filtrado.empty:
-    # Ensure all required columns exist in df_filtrado before selecting
-    required_cols_detalhes = [col for col in colunas_detalhes if col in df_filtrado.columns]
-    df_detalhes_filtrado = df_filtrado[required_cols_detalhes].copy()
+    # Adicionar coluna 'Tipo' para diferenciar receitas e despesas
+    df_receitas_combinadas_full["Tipo"] = "Receita"
+    df_despesas_combinadas_full["Tipo"] = "Despesa"
 
-    # Opcional: Renomear colunas para português
-    df_detalhes_filtrado.rename(columns={
-        'Identificador do cliente': 'ID Cliente',
-        'Nome do cliente': 'Nome Cliente',
-        'Descrição': 'Descrição',
-        'Valor total recebido da parcela (R$)': 'Valor Recebido Total (R$)',
-        'Categoria 1': 'Categoria Principal',
-        'Valor na Categoria 1': 'Valor Categoria Principal (R$)',
-        'Mês Nome Extenso': 'Mês'
-    }, inplace=True)
+    # Concatenar os DataFrames completos
+    df_combined_full = pd.concat([df_receitas_combinadas_full, df_despesas_combinadas_full], ignore_index=True)
+
+    # Mapear nome do mês completo para filtro e exibição
+    df_combined_full['Mês Nome Extenso'] = df_combined_full['Mês'].map(meses_extenso)
+
+    # Filtrar o DataFrame completo pelos meses selecionados (em nome extenso)
+    df_detalhes_filtrado = df_combined_full[df_combined_full["Mês Nome Extenso"].isin(meses_selecionados_extenso)].copy()
 
 
-    st.dataframe(df_detalhes_filtrado)
-else:
-    st.warning("Dados detalhados não disponíveis para os meses selecionados.")
+    # Exibir apenas as colunas relevantes e renomeá-las para melhor visualização, se necessário
+    # Incluindo a coluna 'Tipo' para saber se é Receita ou Despesa
+    colunas_detalhes = ['Tipo', 'Identificador do cliente', 'Nome do cliente', 'Identificador do fornecedor', 'Nome do fornecedor',
+                        'Descrição', 'Valor total recebido da parcela (R$)', 'Valor total pago da parcela (R$)',
+                        'Categoria 1', 'Valor na Categoria 1', 'Mês Nome Extenso']
+
+    # Check if df_detalhes_filtrado is not empty before selecting columns
+    if not df_detalhes_filtrado.empty:
+        # Ensure all required columns exist before selecting
+        required_cols_detalhes = [col for col in colunas_detalhes if col in df_detalhes_filtrado.columns]
+        df_detalhes_filtrado = df_detalhes_filtrado[required_cols_detalhes].copy()
+
+        # Opcional: Renomear colunas para português para exibição
+        df_detalhes_filtrado.rename(columns={
+            'Identificador do cliente': 'ID Cliente',
+            'Nome do cliente': 'Nome Cliente',
+            'Identificador do fornecedor': 'ID Fornecedor',
+            'Nome do fornecedor': 'Nome Fornecedor',
+            'Descrição': 'Descrição',
+            'Valor total recebido da parcela (R$)': 'Valor Recebido Total (R$)',
+            'Valor total pago da parcela (R$)': 'Valor Pago Total (R$)',
+            'Categoria 1': 'Categoria Principal',
+            'Valor na Categoria 1': 'Valor Categoria Principal (R$)',
+            'Mês Nome Extenso': 'Mês'
+        }, inplace=True)
+
+        st.dataframe(df_detalhes_filtrado)
+    elif meses_selecionados_extenso: # Show message only if months are selected but no data
+        st.warning("Dados detalhados não disponíveis para os meses selecionados.")
+    else: # Show message if no months are selected
+        st.info("Selecione os meses na barra lateral para ver os dados detalhados.")
+
+except FileNotFoundError:
+     st.warning(f"Não foi possível carregar os DataFrames combinados originais do arquivo Excel para exibir os detalhes.")
+except Exception as e:
+    st.error(f"Erro ao carregar os DataFrames combinados originais do arquivo Excel: {e}")
 
 
-# Exibir detalhes dos clientes cancelados para os meses selecionados
+# Exibir detalhes dos clientes cancelados para os meses selecionados (usando df_clientes_cancelados_detalhe_filtrado)
 st.subheader(f"❌ Detalhes dos Clientes Cancelados nos Meses Selecionados")
 
-# Filtrar o DataFrame de detalhes dos cancelados pelos meses selecionados
-# Check if df_clientes_cancelados_detalhe is not empty before filtering
-if not df_clientes_cancelados_detalhe.empty:
-    df_cancelados_mes = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy()
-
+# Check if df_clientes_cancelados_detalhe_filtrado is not empty before displaying
+if not df_clientes_cancelados_detalhe_filtrado.empty:
     # Exibir as colunas relevantes para os detalhes dos cancelados
     colunas_cancelados = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Mês Nome Extenso'] # Incluir Mês Nome Extenso
-    # Ensure all required columns exist in df_cancelados_mes before selecting
-    required_cols_cancelados = [col for col in colunas_cancelados if col in df_cancelados_mes.columns]
-    df_cancelados_mes_detalhes = df_cancelados_mes[required_cols_cancelados].copy()
+    # Ensure all required columns exist before selecting
+    required_cols_cancelados = [col for col in colunas_cancelados if col in df_clientes_cancelados_detalhe_filtrado.columns]
+    df_cancelados_mes_detalhes = df_clientes_cancelados_detalhe_filtrado[required_cols_cancelados].copy()
 
 
-    # Opcional: Renomear colunas para português
+    # Opcional: Renomear colunas para português para exibição
     df_cancelados_mes_detalhes.rename(columns={
         'Identificador do cliente': 'ID Cliente',
         'Nome do cliente': 'Nome Cliente',
@@ -356,5 +339,7 @@ if not df_clientes_cancelados_detalhe.empty:
     }, inplace=True)
 
     st.dataframe(df_cancelados_mes_detalhes)
-else:
+elif meses_selecionados_extenso: # Show message only if months are selected but no data
     st.warning("Detalhes de clientes cancelados não disponíveis para os meses selecionados.")
+else: # Show message if no months are selected
+    st.info("Selecione os meses na barra lateral para ver os detalhes dos clientes cancelados.")
