@@ -163,8 +163,13 @@ df_agrupado_receitas.rename(columns={"Valor total recebido da parcela (R$)": "Va
 df_agrupado_despesas = df_despesas_filtrado.groupby("Mês Nome Extenso", as_index=False)["Valor total pago da parcela (R$)"].sum()
 df_agrupado_despesas.rename(columns={"Valor total pago da parcela (R$)": "Valor_Despesa"}, inplace=True)
 
-# Juntar receitas e despesas
-df_agrupado = pd.merge(df_agrupado_receitas, df_agrupado_despesas, on="Mês Nome Extenso", how="outer").fillna(0)
+# Criar base de meses (para garantir que todos os meses apareçam, mesmo zerados)
+df_meses = pd.DataFrame({"Mês Nome Extenso": [meses_extenso[m] for m in month_order if m in meses_selecionados_original]})
+
+# Juntar com receitas e despesas
+df_agrupado = df_meses.merge(df_agrupado_receitas, on="Mês Nome Extenso", how="left")
+df_agrupado = df_agrupado.merge(df_agrupado_despesas, on="Mês Nome Extenso", how="left")
+df_agrupado.fillna(0, inplace=True)
 
 # Garantir ordem correta dos meses
 df_agrupado["Mês Nome Extenso"] = pd.Categorical(df_agrupado["Mês Nome Extenso"], categories=[meses_extenso[m] for m in month_order], ordered=True)
