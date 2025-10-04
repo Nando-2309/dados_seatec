@@ -43,7 +43,7 @@ for df_resumo in [df_faturamento_mensal, df_cancelamentos_resumo, df_churn_rate_
         df_resumo['Mês'] = pd.Categorical(df_resumo['Mês'], categories=month_order_capitalized, ordered=True)
         df_resumo = df_resumo.sort_values('Mês') # Ordenar pelo mês
 
-# Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe esteja em português (capitalizada) para o boxplot
+# Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe esteja em português (capitalizada) para o boxplot e tabela de detalhes
 if 'Mês' in df_clientes_cancelados_detalhe.columns:
     df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
     # Não precisa categorizar e ordenar aqui, pois o Plotly Express fará isso com base em category_orders
@@ -65,32 +65,37 @@ df_churn_rate_filtrado = df_churn_rate_resumo[df_churn_rate_resumo['Mês'].isin(
 df_receita_mensal_filtrado = df_receita_mensal_resumo[df_receita_mensal_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
 df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_resumo[df_ticket_medio_mensal_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
 
-# *** Aplicar ordenação categórica aos DataFrames FILTRADOS antes de plotar ***
 
-# Garantir que o DataFrame de receita mensal filtrado esteja ordenado pelos meses selecionados
-if not df_receita_mensal_filtrado.empty:
-    df_receita_mensal_filtrado['Mês'] = pd.Categorical(df_receita_mensal_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
-    df_receita_mensal_filtrado = df_receita_mensal_filtrado.sort_values('Mês')
-
-# Garantir que o DataFrame de ticket médio filtrado esteja ordenado pelos meses selecionados
-if not df_ticket_medio_mensal_filtrado.empty:
-    df_ticket_medio_mensal_filtrado['Mês'] = pd.Categorical(df_ticket_medio_mensal_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
-    df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_filtrado.sort_values('Mês')
-
-# Garantir que o DataFrame de faturamento filtrado esteja ordenado pelos meses selecionados
+# Aplicar ordenação categórica aos DataFrames FILTRADOS antes de plotar
 if not df_faturamento_filtrado.empty:
      df_faturamento_filtrado['Mês'] = pd.Categorical(df_faturamento_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
      df_faturamento_filtrado = df_faturamento_filtrado.sort_values('Mês')
 
-# Garantir que o DataFrame de churn rate filtrado esteja ordenado pelos meses selecionados
+if not df_cancelamentos_filtrado.empty:
+    df_cancelamentos_filtrado['Mês'] = pd.Categorical(df_cancelamentos_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
+    df_cancelamentos_filtrado = df_cancelamentos_filtrado.sort_values('Mês')
+
 if not df_churn_rate_filtrado.empty:
      df_churn_rate_filtrado['Mês'] = pd.Categorical(df_churn_rate_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
      df_churn_rate_filtrado = df_churn_rate_filtrado.sort_values('Mês')
 
+if not df_receita_mensal_filtrado.empty:
+    df_receita_mensal_filtrado['Mês'] = pd.Categorical(df_receita_mensal_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
+    df_receita_mensal_filtrado = df_receita_mensal_filtrado.sort_values('Mês')
+
+if not df_ticket_medio_mensal_filtrado.empty:
+    df_ticket_medio_mensal_filtrado['Mês'] = pd.Categorical(df_ticket_medio_mensal_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
+    df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_filtrado.sort_values('Mês')
+
 
 # Filtrar detalhes dos clientes cancelados pelos meses selecionados (comparando com a coluna de mês original)
-meses_selecionados_original = [k for k, v in meses_extenso.items() if v in meses_selecionados_extenso]
-df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês'].isin(meses_selecionados_original)].copy()
+# Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe_filtrado seja categórica e ordenada
+if 'Mês Nome Extenso' in df_clientes_cancelados_detalhe.columns and meses_selecionados_extenso:
+    df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês Nome Extenso'].isin(meses_selecionados_extenso)].copy()
+    df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'] = pd.Categorical(df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'], categories=meses_selecionados_extenso, ordered=True)
+    df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe_filtrado.sort_values('Mês Nome Extenso')
+else:
+     df_clientes_cancelados_detalhe_filtrado = pd.DataFrame() # Cria um dataframe vazio se não houver meses selecionados ou coluna
 
 
 # --- Página principal ---
@@ -202,24 +207,15 @@ if not df_churn_rate_filtrado.empty:
     # Renomear a coluna de valor para um nome mais descritivo para o gráfico
     df_churn_rate_filtrado.rename(columns={'Identificador do cliente': 'Churn Rate (%)'}, inplace=True)
 
+    # Criar a coluna de rótulos com o percentual correto formatado
+    df_churn_rate_filtrado['Churn Rate Label'] = df_churn_rate_filtrado['Churn Rate (%)'].apply(lambda x: f'{x:.2f}%')
+
     fig5 = px.pie(df_churn_rate_filtrado, values='Churn Rate (%)', names='Mês',
              title='Taxa de Rotatividade (Churn Rate) por Mês')
 
-    # Atualiza os traços para mostrar o percentual real de churn rate para cada mês
-    # Certifique-se que a coluna de valores é numérica para o cálculo do percentual na pizza
-    df_churn_rate_filtrado['Churn Rate (%)'] = pd.to_numeric(df_churn_rate_filtrado['Churn Rate (%)'], errors='coerce')
-    df_churn_rate_filtrado.dropna(subset=['Churn Rate (%)'], inplace=True) # Remover linhas com valores NaN após coerção
-
-    # Calcular o total de churn para os meses selecionados
-    total_churn_filtrado = df_churn_rate_filtrado['Churn Rate (%)'].sum()
-
-    if total_churn_filtrado > 0:
-        # Calcular percentuais baseados nos valores FILTRADOS
-        churn_rate_percentages = [f'{(val / total_churn_filtrado):.1%}' for val in df_churn_rate_filtrado['Churn Rate (%)'].values]
-        # Usar 'text' para exibir apenas o texto personalizado e 'textinfo' para a posição
-        fig5.update_traces(textinfo='percent+label', insidetextorientation='radial', text=churn_rate_percentages)
-    else:
-         fig5.update_traces(textinfo='label+value', insidetextorientation='radial') # Show only label and value if total is zero or null
+    # Usar a coluna 'Churn Rate Label' para exibir o texto no gráfico
+    # textinfo='text' para mostrar apenas o texto personalizado
+    fig5.update_traces(textinfo='text', text=df_churn_rate_filtrado['Churn Rate Label'], insidetextorientation='radial')
 
 
     # Update layout to change the title font size and make it bold
@@ -256,12 +252,29 @@ if not df_clientes_cancelados_detalhe_filtrado.empty:
                   category_orders={'Mês Nome Extenso': meses_selecionados_extenso}) # Order the months
 
         st.plotly_chart(fig6, use_container_width=True)
+
+        # --- Exibir lista de clientes cancelados por mês ---
+        st.subheader("Lista de Clientes Cancelados por Mês Selecionado")
+
+        # Agrupar o DataFrame filtrado por mês e listar os nomes dos clientes
+        clientes_cancelados_listados = df_clientes_cancelados_detalhe_filtrado.groupby('Mês Nome Extenso')['Nome do cliente'].apply(list)
+
+        # Iterar sobre os meses selecionados para exibir a lista
+        for mes in meses_selecionados_extenso:
+            if mes in clientes_cancelados_listados:
+                st.write(f"**{mes}:**")
+                # Usar uma lista não ordenada para exibir os nomes
+                st.markdown("\n".join([f"- {nome}" for nome in clientes_cancelados_listados[mes]]))
+            else:
+                 st.write(f"**{mes}:** Nenhum cliente cancelado neste mês.")
+
+
     else:
         st.warning("Coluna 'Valor total recebido da parcela (R$)' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
 elif meses_selecionados_extenso: # Show message only if months are selected but no data
     st.warning("Dados de clientes cancelados não disponíveis para os meses selecionados.")
 else: # Show message if no months are selected
-    st.info("Selecione os meses na barra lateral para ver os detalhes dos cancelamentos.")
+    st.info("Selecione os meses na barra lateral para ver os dados de cancelamentos.")
 
 
 # --- Rodapé com dados detalhados ---
