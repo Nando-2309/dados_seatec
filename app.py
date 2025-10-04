@@ -34,6 +34,10 @@ except Exception as e:
 df_receitas_combinadas["Tipo"] = "Receita"
 df_despesas_combinadas["Tipo"] = "Despesa"
 
+st.write(df_receitas_combinadas.columns) 
+st.write(df_receitas_combinadas.head())  # Exibe as primeiras linhas do DataFrame para inspeção
+
+
 # Concatenar receitas e despesas para o filtro de mês
 df_combined = pd.concat([df_receitas_combinadas, df_despesas_combinadas], ignore_index=True)
 
@@ -44,6 +48,9 @@ meses_extenso = {
     'abril': 'Abril', 'maio': 'Maio', 'junho': 'Junho',
     'julho': 'Julho', 'agosto': 'Agosto'
 }
+
+st.write(df_receitas_combinadas.head())  # Exibe as primeiras linhas do DataFrame para inspeção
+
 
 # Garantir que a coluna 'Mês' esteja presente e usar o mapeamento
 if 'Mês' in df_combined.columns:
