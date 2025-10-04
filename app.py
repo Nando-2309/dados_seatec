@@ -150,59 +150,52 @@ if not ticket_medio_mensalidades.empty:
 else:
     st.warning("Dados de ticket médio não disponíveis para os meses selecionados.")
 
-
 # --- Gráfico 3: Receitas vs Despesas ---
 st.subheader("Receitas vs Despesas")
 
-# Criar dataframe de meses (garante ordem correta)
-df_meses = pd.DataFrame({
-    "Mês Nome Extenso": [
-        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-    ]
-})
-
 # --- Agrupar Receitas ---
-df_receitas_agg =  df_receitas_combinadas.groupby("Mês Nome Extenso", as_index=False)["Valor Pago"].sum()
+df_receitas_agg = df_receitas_combinadas.groupby("Mês", as_index=False)["Valor Pago"].sum()
 df_receitas_agg.rename(columns={"Valor Pago": "Valor_Receita"}, inplace=True)
 
 # --- Agrupar Despesas ---
-df_despesas_agg = df_despesas_combinadas.groupby("Mês Nome Extenso", as_index=False)["Valor total pago da parcela (R$)"].sum()
+df_despesas_agg = df_despesas_combinadas.groupby("Mês", as_index=False)["Valor total pago da parcela (R$)"].sum()
 df_despesas_agg.rename(columns={"Valor total pago da parcela (R$)": "Valor_Despesa"}, inplace=True)
 
-# Ajustar despesas para valores positivos (caso venham negativos)
+# Ajustar despesas para valores positivos (caso estejam negativas)
 df_despesas_agg["Valor_Despesa"] = df_despesas_agg["Valor_Despesa"].abs()
 
-# --- Juntar Receitas + Despesas com todos os meses ---
-df_agrupado = df_meses.merge(df_receitas_agg, on="Mês Nome Extenso", how="left")
-df_agrupado = df_agrupado.merge(df_despesas_agg, on="Mês Nome Extenso", how="left")
+# --- Juntar Receitas + Despesas por Mês ---
+df_agrupado = pd.merge(df_receitas_agg, df_despesas_agg, on="Mês", how="outer")
 df_agrupado.fillna(0, inplace=True)
 
-# Garantir ordem dos meses
-df_agrupado["Mês Nome Extenso"] = pd.Categorical(
-    df_agrupado["Mês Nome Extenso"],
-    categories=df_meses["Mês Nome Extenso"],
-    ordered=True
-)
+# Ordenar os meses se necessário (garantir que seja inteiro de 1 a 12)
+df_agrupado = df_agrupado.sort_values(by="Mês")
 
-# --- Transformar em formato longo (para barras lado a lado) ---
+# --- Transformar em formato longo (para gráfico de barras lado a lado) ---
 df_long = df_agrupado.melt(
-    id_vars="Mês Nome Extenso",
+    id_vars="Mês",
     value_vars=["Valor_Receita", "Valor_Despesa"],
     var_name="Tipo",
     value_name="Valor"
 )
 
-# Ajustar labels
+# Renomear os tipos para exibição mais amigável
 df_long["Tipo"] = df_long["Tipo"].replace({
     "Valor_Receita": "Receita",
     "Valor_Despesa": "Despesa"
 })
 
+# Opcional: mapa para nomes por extenso apenas para exibir no eixo X
+nomes_meses = {
+    1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
+    7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"
+}
+df_long["Mês Nome"] = df_long["Mês"].map(nomes_meses)
+
 # --- Criar gráfico ---
 fig = px.bar(
     df_long,
-    x="Mês Nome Extenso",
+    x="Mês Nome",  # ou "Mês" se preferir número
     y="Valor",
     color="Tipo",
     barmode="group",
