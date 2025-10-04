@@ -147,7 +147,7 @@ else:
 # --- Gráfico 3: Receitas vs Despesas ---
 st.subheader("Receitas vs Despesas")
 
-# Filtrar receitas e despesas pelos meses selecionados
+# Filtrar pelos meses escolhidos
 df_receitas_filtrado = df_receitas_combinadas[df_receitas_combinadas["Mês"].isin(meses_selecionados_original)].copy()
 df_despesas_filtrado = df_despesas_combinadas[df_despesas_combinadas["Mês"].isin(meses_selecionados_original)].copy()
 
@@ -155,40 +155,37 @@ df_despesas_filtrado = df_despesas_combinadas[df_despesas_combinadas["Mês"].isi
 df_receitas_filtrado["Mês Nome Extenso"] = df_receitas_filtrado["Mês"].map(meses_extenso)
 df_despesas_filtrado["Mês Nome Extenso"] = df_despesas_filtrado["Mês"].map(meses_extenso)
 
-# Agrupar receitas por mês
-df_agrupado_receitas = df_receitas_filtrado.groupby("Mês Nome Extenso", as_index=False)["Valor total recebido da parcela (R$)"].sum()
-df_agrupado_receitas.rename(columns={"Valor total recebido da parcela (R$)": "Valor_Receita"}, inplace=True)
+# Agrupar receitas e despesas
+df_receitas_agg = df_receitas_filtrado.groupby("Mês Nome Extenso", as_index=False)["Valor total recebido da parcela (R$)"].sum()
+df_receitas_agg.rename(columns={"Valor total recebido da parcela (R$)": "Receita"}, inplace=True)
 
-# Agrupar despesas por mês
-df_agrupado_despesas = df_despesas_filtrado.groupby("Mês Nome Extenso", as_index=False)["Valor total pago da parcela (R$)"].sum()
-df_agrupado_despesas.rename(columns={"Valor total pago da parcela (R$)": "Valor_Despesa"}, inplace=True)
+df_despesas_agg = df_despesas_filtrado.groupby("Mês Nome Extenso", as_index=False)["Valor total pago da parcela (R$)"].sum()
+df_despesas_agg.rename(columns={"Valor total pago da parcela (R$)": "Despesa"}, inplace=True)
 
-# Criar base de meses (para garantir que todos os meses apareçam, mesmo zerados)
+# Criar base de meses (garante todos os meses, mesmo zerados)
 df_meses = pd.DataFrame({"Mês Nome Extenso": [meses_extenso[m] for m in month_order if m in meses_selecionados_original]})
 
 # Juntar com receitas e despesas
-df_agrupado = df_meses.merge(df_agrupado_receitas, on="Mês Nome Extenso", how="left")
-df_agrupado = df_agrupado.merge(df_agrupado_despesas, on="Mês Nome Extenso", how="left")
+df_agrupado = df_meses.merge(df_receitas_agg, on="Mês Nome Extenso", how="left")
+df_agrupado = df_agrupado.merge(df_despesas_agg, on="Mês Nome Extenso", how="left")
 df_agrupado.fillna(0, inplace=True)
 
-# Garantir ordem correta dos meses
-df_agrupado["Mês Nome Extenso"] = pd.Categorical(df_agrupado["Mês Nome Extenso"], categories=[meses_extenso[m] for m in month_order], ordered=True)
-df_agrupado = df_agrupado.sort_values("Mês Nome Extenso")
-
-# Transformar para formato longo
+# Passar para formato longo (para ter a coluna 'Tipo')
 df_agrupado_long = df_agrupado.melt(
     id_vars="Mês Nome Extenso",
-    value_vars=["Valor_Receita", "Valor_Despesa"],
+    value_vars=["Receita", "Despesa"],
     var_name="Tipo",
     value_name="Valor"
 )
 
-df_agrupado_long["Tipo"] = df_agrupado_long["Tipo"].map({
-    "Valor_Receita": "Receita",
-    "Valor_Despesa": "Despesa"
-})
+# Ordenar os meses na ordem certa
+df_agrupado_long["Mês Nome Extenso"] = pd.Categorical(
+    df_agrupado_long["Mês Nome Extenso"],
+    categories=[meses_extenso[m] for m in month_order],
+    ordered=True
+)
 
-# Gráfico
+# Gráfico de barras lado a lado
 fig3 = px.bar(
     df_agrupado_long,
     x="Mês Nome Extenso",
@@ -201,7 +198,6 @@ fig3 = px.bar(
 )
 
 st.plotly_chart(fig3, use_container_width=True)
-
 
 ## Gráfico 4 - Lucratividade Mensal (usando df_faturamento_mensal ordenado)
 st.subheader("Lucratividade Mensal")
