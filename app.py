@@ -147,21 +147,24 @@ else:
 # --- Gráfico 3: Receitas vs Despesas ---
 st.subheader("Receitas vs Despesas")
 
-# Primeiro, mapeie os meses ANTES do groupby
-df_receitas_combinadas["Mês Nome Extenso"] = df_receitas_combinadas["Mês"].map(meses_extenso)
-df_despesas_combinadas["Mês Nome Extenso"] = df_despesas_combinadas["Mês"].map(meses_extenso)
+# Filtrar receitas e despesas pelos meses selecionados
+df_receitas_filtrado = df_receitas_combinadas[df_receitas_combinadas["Mês"].isin(meses_selecionados_original)].copy()
+df_despesas_filtrado = df_despesas_combinadas[df_despesas_combinadas["Mês"].isin(meses_selecionados_original)].copy()
+
+# Mapear meses por extenso
+df_receitas_filtrado["Mês Nome Extenso"] = df_receitas_filtrado["Mês"].map(meses_extenso)
+df_despesas_filtrado["Mês Nome Extenso"] = df_despesas_filtrado["Mês"].map(meses_extenso)
 
 # Agrupar receitas por mês
-df_agrupado_receitas = df_receitas_combinadas.groupby("Mês Nome Extenso", as_index=False)["Valor total recebido da parcela (R$)"].sum()
+df_agrupado_receitas = df_receitas_filtrado.groupby("Mês Nome Extenso", as_index=False)["Valor total recebido da parcela (R$)"].sum()
 df_agrupado_receitas.rename(columns={"Valor total recebido da parcela (R$)": "Valor_Receita"}, inplace=True)
 
 # Agrupar despesas por mês
-df_agrupado_despesas = df_despesas_combinadas.groupby("Mês Nome Extenso", as_index=False)["Valor total pago da parcela (R$)"].sum()
+df_agrupado_despesas = df_despesas_filtrado.groupby("Mês Nome Extenso", as_index=False)["Valor total pago da parcela (R$)"].sum()
 df_agrupado_despesas.rename(columns={"Valor total pago da parcela (R$)": "Valor_Despesa"}, inplace=True)
 
 # Juntar receitas e despesas
-df_agrupado = pd.merge(df_agrupado_receitas, df_agrupado_despesas, on="Mês Nome Extenso", how="outer")
-df_agrupado.fillna(0, inplace=True)
+df_agrupado = pd.merge(df_agrupado_receitas, df_agrupado_despesas, on="Mês Nome Extenso", how="outer").fillna(0)
 
 # Garantir ordem correta dos meses
 df_agrupado["Mês Nome Extenso"] = pd.Categorical(df_agrupado["Mês Nome Extenso"], categories=[meses_extenso[m] for m in month_order], ordered=True)
