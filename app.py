@@ -77,6 +77,11 @@ df_churn_rate_filtrado = df_churn_rate_resumo[df_churn_rate_resumo['Mês'].isin(
 df_receita_mensal_filtrado = df_receita_mensal_resumo[df_receita_mensal_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
 df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_resumo[df_ticket_medio_mensal_resumo['Mês'].isin(meses_selecionados_extenso)].copy()
 
+# Garantir que o DataFrame de ticket médio filtrado também esteja ordenado pelos meses selecionados
+if not df_ticket_medio_mensal_filtrado.empty:
+    df_ticket_medio_mensal_filtrado['Mês'] = pd.Categorical(df_ticket_medio_mensal_filtrado['Mês'], categories=meses_selecionados_extenso, ordered=True)
+    df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_filtrado.sort_values('Mês')
+
 
 # Filtrar detalhes dos clientes cancelados pelos meses selecionados (comparando com a coluna de mês original)
 meses_selecionados_original = [k for k, v in meses_extenso.items() if v in meses_selecionados_extenso]
