@@ -217,8 +217,7 @@ if not df_churn_rate_filtrado.empty:
     # textinfo='text' para mostrar apenas o texto personalizado
     fig5.update_traces(textinfo='text', text=df_churn_rate_filtrado['Churn Rate Label'], insidetextorientation='radial')
 
-
-    # Update layout to change the title font size and make it bold
+# Atualize o layout para alterar o tamanho da fonte do título e deixá-lo em negrito
     fig5.update_layout(
         title={
             'text': 'Taxa de Rotatividade (Churn Rate) por Mês',
@@ -243,7 +242,7 @@ else:
 st.subheader("Cancelamentos Mês a Mês")
 
 if not df_clientes_cancelados_detalhe_filtrado.empty:
-    # Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
+# Certifique-se de que a coluna 'Valor total recebido da parcela (R$)' exista neste DataFrame
     if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe_filtrado.columns:
 
         # Criar o gráfico de boxplot usando Plotly Go para maior flexibilidade de anotação
@@ -287,9 +286,9 @@ if not df_clientes_cancelados_detalhe_filtrado.empty:
 
     else:
         st.warning("Coluna 'Valor total recebido da parcela (R$)' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
-elif meses_selecionados_extenso: # Show message only if months are selected but no data
+elif meses_selecionados_extenso:  # Mostrar mensagem apenas se meses forem selecionados, mas não houver dados
     st.warning("Dados de clientes cancelados não disponíveis para os meses selecionados.")
-else: # Show message if no months are selected
+else:  # Mostrar mensagem se nenhum mês for selecionado
     st.info("Selecione os meses na barra lateral para ver os dados de cancelamentos.")
 
 
@@ -327,9 +326,9 @@ try:
                         'Descrição', 'Valor total recebido da parcela (R$)', 'Valor total pago da parcela (R$)',
                         'Categoria 1', 'Valor na Categoria 1', 'Mês Nome Extenso']
 
-    # Check if df_detalhes_filtrado is not empty before selecting columns
+   # Verifica se df_detalhes_filtrado não está vazio antes de selecionar as colunas
     if not df_detalhes_filtrado.empty:
-        # Ensure all required columns exist before selecting
+        # Ensure all required columns exist before selecting# Garantir que todas as colunas necessárias existam antes de selecionar
         required_cols_detalhes = [col for col in colunas_detalhes if col in df_detalhes_filtrado.columns]
         df_detalhes_filtrado = df_detalhes_filtrado[required_cols_detalhes].copy()
 
@@ -347,10 +346,9 @@ try:
             'Mês Nome Extenso': 'Mês'
         }, inplace=True)
 
-        st.dataframe(df_detalhes_filtrado)
-    elif meses_selecionados_extenso: # Show message only if months are selected but no data
+        st.dataframe(df_detalhes_filtrado) # Mostrar mensagem apenas se meses forem selecionados, mas não houver dados
         st.warning("Dados detalhados não disponíveis para os meses selecionados.")
-    else: # Show message if no months are selected
+    else: # Mostrar mensagem se nenhum mês for selecionado
         st.info("Selecione os meses na barra lateral para ver os dados detalhados.")
 
 except FileNotFoundError:
@@ -362,11 +360,11 @@ except Exception as e:
 # Exibir detalhes dos clientes cancelados para os meses selecionados (usando df_clientes_cancelados_detalhe_filtrado)
 st.subheader(f"❌ Detalhes dos Clientes Cancelados nos Meses Selecionados")
 
-# Check if df_clientes_cancelados_detalhe_filtrado is not empty before displaying
+# Verifica se df_clientes_cancelados_detalhe_filtrado não está vazio antes de exibir
 if not df_clientes_cancelados_detalhe_filtrado.empty:
     # Exibir as colunas relevantes para os detalhes dos cancelados
     colunas_cancelados = ['Identificador do cliente', 'Nome do cliente', 'Descrição', 'Valor total recebido da parcela (R$)', 'Mês Nome Extenso'] # Incluir Mês Nome Extenso
-    # Ensure all required columns exist before selecting
+# Garantir que todas as colunas obrigatórias existam antes de selecionar
     required_cols_cancelados = [col for col in colunas_cancelados if col in df_clientes_cancelados_detalhe_filtrado.columns]
     df_cancelados_mes_detalhes = df_clientes_cancelados_detalhe_filtrado[required_cols_cancelados].copy()
 
@@ -381,7 +379,7 @@ if not df_clientes_cancelados_detalhe_filtrado.empty:
     }, inplace=True)
 
     st.dataframe(df_cancelados_mes_detalhes)
-elif meses_selecionados_extenso: # Show message only if months are selected but no data
+elif meses_selecionados_extenso:# Mostrar mensagem apenas se meses forem selecionados, mas não houver dados
     st.warning("Detalhes de clientes cancelados não disponíveis para os meses selecionados.")
-else: # Show message if no months are selected
+else:  # Mostrar mensagem se nenhum mês for selecionado
     st.info("Selecione os meses na barra lateral para ver os detalhes dos clientes cancelados.")
