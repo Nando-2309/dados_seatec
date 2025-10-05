@@ -243,31 +243,47 @@ else:
 st.subheader("Cancelamentos Mês a Mês")
 
 if not df_clientes_cancelados_detalhe_filtrado.empty:
-    # Create the boxplot using Plotly Express
     # Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
     if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe_filtrado.columns:
-        fig6 = px.box(df_clientes_cancelados_detalhe_filtrado, x='Mês Nome Extenso', y='Valor total recebido da parcela (R$)',
-                  title='Cancelamentos Mês a Mês - Distribuição de Valores',
-                  color='Mês Nome Extenso', # Adicionado para colorir por mês
-                  category_orders={'Mês Nome Extenso': meses_selecionados_extenso}) # Order the months
+
+        # Criar o gráfico de boxplot usando Plotly Go para maior flexibilidade de anotação
+        fig6 = go.Figure()
+
+        # Adicionar um boxplot para cada mês selecionado
+        for mes in meses_selecionados_extenso:
+            df_mes = df_clientes_cancelados_detalhe_filtrado[df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'] == mes].copy()
+            if not df_mes.empty:
+                fig6.add_trace(go.Box(
+                    y=df_mes['Valor total recebido da parcela (R$)'],
+                    name=mes,
+                    boxpoints='all', # Mostrar todos os pontos
+                    jitter=0.3,       # Adicionar jitter aos pontos
+                    pointpos=-1.8     # Posição dos pontos
+                ))
+
+                # Adicionar anotações para os nomes dos clientes acima de cada ponto
+                for index, row in df_mes.iterrows():
+                    fig6.add_annotation(
+                        x=mes, # Posição X é o nome do mês
+                        y=row['Valor total recebido da parcela (R$)'], # Posição Y é o valor da parcela
+                        text=row['Nome do cliente'], # Texto é o nome do cliente
+                        showarrow=False,
+                        yshift=10, # Deslocar o texto um pouco para cima do ponto
+                        font=dict(size=8),
+                        textangle=-90 # Rotacionar o texto para vertical
+                    )
+
+
+        # Atualizar o layout do gráfico
+        fig6.update_layout(
+            title='Cancelamentos Mês a Mês - Distribuição de Valores e Nomes',
+            xaxis_title='Mês',
+            yaxis_title='Valor Recebido da Parcela (R$)',
+            xaxis={'categoryorder':'array', 'categoryarray': meses_selecionados_extenso} # Garantir a ordem no eixo X
+        )
+
 
         st.plotly_chart(fig6, use_container_width=True)
-
-        # --- Exibir lista de clientes cancelados por mês ---
-        st.subheader("Lista de Clientes Cancelados por Mês Selecionado")
-
-        # Agrupar o DataFrame filtrado por mês e listar os nomes dos clientes
-        clientes_cancelados_listados = df_clientes_cancelados_detalhe_filtrado.groupby('Mês Nome Extenso')['Nome do cliente'].apply(list)
-
-        # Iterar sobre os meses selecionados para exibir a lista
-        for mes in meses_selecionados_extenso:
-            if mes in clientes_cancelados_listados:
-                st.write(f"**{mes}:**")
-                # Usar uma lista não ordenada para exibir os nomes
-                st.markdown("\n".join([f"- {nome}" for nome in clientes_cancelados_listados[mes]]))
-            else:
-                 st.write(f"**{mes}:** Nenhum cliente cancelado neste mês.")
-
 
     else:
         st.warning("Coluna 'Valor total recebido da parcela (R$)' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
