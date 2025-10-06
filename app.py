@@ -95,8 +95,14 @@ df_clientes_cancelados_detalhe_filtrado = pd.DataFrame()
 # Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe esteja em português (capitalizada) para o boxplot e tabela de detalhes
 if 'Mês' in df_clientes_cancelados_detalhe.columns:
     df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
-    # Não precisa categorizar e ordenar aqui, pois o Plotly Express fará isso com base em category_orders
-
+    if meses_selecionados_extenso:
+        df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês Nome Extenso'].isin(meses_selecionados_extenso)].copy()
+        df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'] = pd.Categorical(df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'], categories=meses_selecionados_extenso, ordered=True)
+        df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe_filtrado.sort_values('Mês Nome Extenso')
+    else:
+        df_clientes_cancelados_detalhe_filtrado = pd.DataFrame() # Ensure it's empty if no months selected
+else:
+     df_clientes_cancelados_detalhe_filtrado = pd.DataFrame() # Ensure it's empty if 'Mês' column is missing
 
 # --- Página principal ---
 st.title("📊 Dados da Seatec")
@@ -254,6 +260,7 @@ if 'Mês' in df_clientes_cancelados_detalhe.columns:
 else:
      df_clientes_cancelados_detalhe_filtrado = pd.DataFrame() # Ensure it's empty if 'Mês' column is missing
 
+
 if not df_clientes_cancelados_detalhe_filtrado.empty:
     # Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
     if 'Valor total recebido da parcela (R$)' in df_clientes_cancelados_detalhe_filtrado.columns:
@@ -284,6 +291,19 @@ if not df_clientes_cancelados_detalhe_filtrado.empty:
 
 
         st.plotly_chart(fig6, use_container_width=True)
+
+        # Exibir os nomes dos clientes cancelados por mês abaixo do boxplot
+        st.subheader("Clientes Cancelados por Mês:")
+        if not df_clientes_cancelados_detalhe_filtrado.empty:
+             for mes in meses_selecionados_extenso:
+                clientes_do_mes = df_clientes_cancelados_detalhe_filtrado[df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'] == mes]['Nome do cliente'].tolist()
+                if clientes_do_mes:
+                    st.write(f"**{mes}:**")
+                    for cliente in clientes_do_mes:
+                         st.write(f"- {cliente}")
+                else:
+                    st.write(f"**{mes}:** Nenhum cliente cancelado neste mês.")
+
 
     else:
         st.warning("Coluna 'Valor total recebido da parcela (R$)' não encontrada no DataFrame de detalhes dos clientes cancelados para o boxplot.")
