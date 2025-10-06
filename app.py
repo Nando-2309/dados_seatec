@@ -88,6 +88,9 @@ if not df_ticket_medio_mensal_filtrado.empty:
     df_ticket_medio_mensal_filtrado = df_ticket_medio_mensal_filtrado.sort_values('Mês')
 
 
+# Inicializar df_clientes_cancelados_detalhe_filtrado como um DataFrame vazio antes de filtrar
+df_clientes_cancelados_detalhe_filtrado = pd.DataFrame()
+
 # Filtrar detalhes dos clientes cancelados pelos meses selecionados (comparando com a coluna de mês original)
 # Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe esteja em português (capitalizada) para o boxplot e tabela de detalhes
 if 'Mês' in df_clientes_cancelados_detalhe.columns:
@@ -238,6 +241,18 @@ else:
 
 ## Gráfico 6 - Cancelamentos (usando df_clientes_cancelados_detalhe_filtrado)
 st.subheader("Cancelamentos Mês a Mês")
+
+# Filter the detailed cancelled clients DataFrame after months are selected
+if 'Mês' in df_clientes_cancelados_detalhe.columns:
+    df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
+    if meses_selecionados_extenso:
+        df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês Nome Extenso'].isin(meses_selecionados_extenso)].copy()
+        df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'] = pd.Categorical(df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'], categories=meses_selecionados_extenso, ordered=True)
+        df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe_filtrado.sort_values('Mês Nome Extenso')
+    else:
+        df_clientes_cancelados_detalhe_filtrado = pd.DataFrame() # Ensure it's empty if no months selected
+else:
+     df_clientes_cancelados_detalhe_filtrado = pd.DataFrame() # Ensure it's empty if 'Mês' column is missing
 
 if not df_clientes_cancelados_detalhe_filtrado.empty:
     # Ensure that the 'Valor total recebido da parcela (R$)' column exists in this DataFrame
