@@ -269,7 +269,7 @@ if not df_clientes_cancelados_detalhe_filtrado.empty:
                         showarrow=False,
                         yshift=10, # Deslocar o texto um pouco para cima do ponto
                         font=dict(size=8),
-                        textangle=-90 # Rotacionar o texto para vertical
+                        
                     )
 
 
