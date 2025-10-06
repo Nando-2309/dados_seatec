@@ -89,13 +89,10 @@ if not df_ticket_medio_mensal_filtrado.empty:
 
 
 # Filtrar detalhes dos clientes cancelados pelos meses selecionados (comparando com a coluna de mês original)
-# Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe_filtrado seja categórica e ordenada
-if 'Mês Nome Extenso' in df_clientes_cancelados_detalhe.columns and meses_selecionados_extenso:
-    df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe[df_clientes_cancelados_detalhe['Mês Nome Extenso'].isin(meses_selecionados_extenso)].copy()
-    df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'] = pd.Categorical(df_clientes_cancelados_detalhe_filtrado['Mês Nome Extenso'], categories=meses_selecionados_extenso, ordered=True)
-    df_clientes_cancelados_detalhe_filtrado = df_clientes_cancelados_detalhe_filtrado.sort_values('Mês Nome Extenso')
-else:
-     df_clientes_cancelados_detalhe_filtrado = pd.DataFrame() # Cria um dataframe vazio se não houver meses selecionados ou coluna
+# Garantir que a coluna 'Mês' no df_clientes_cancelados_detalhe esteja em português (capitalizada) para o boxplot e tabela de detalhes
+if 'Mês' in df_clientes_cancelados_detalhe.columns:
+    df_clientes_cancelados_detalhe['Mês Nome Extenso'] = df_clientes_cancelados_detalhe['Mês'].map(meses_extenso)
+    # Não precisa categorizar e ordenar aqui, pois o Plotly Express fará isso com base em category_orders
 
 
 # --- Página principal ---
