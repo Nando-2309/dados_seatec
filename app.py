@@ -114,7 +114,7 @@ if not df_receita_mensal_filtrado.empty:
     df_receita_mensal_filtrado.rename(columns={'Valor total recebido da parcela (R$)': 'Valor Receita Total (R$)'}, inplace=True)
     fig1 = px.bar(
         df_receita_mensal_filtrado,
-        x="Valor Receita Total (R$)",
+        x=f"Valor Receita Total (R$){df_receita_mensal_filtrado:.2f}",
         y="Mês",
         orientation='h',
         title="Faturamento Bruto Mensal",
