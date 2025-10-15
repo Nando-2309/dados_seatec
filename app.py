@@ -111,7 +111,7 @@ st.title("📊 Dados da Seatec")
 st.subheader("Faturamento Bruto")
 if not df_receita_mensal_filtrado.empty:
     # Renomear a coluna de valor para um nome mais descritivo para o gráfico
-    df_receita_mensal_filtrado.rename(columns={'Valor total recebido da parcela (R$)': 'Valor Receita Total (R$)'}, inplace=True)
+    df_receita_mensal_filtrado.rename(columns=['Valor total recebido da parcela (R$)': 'Valor Receita Total (R$)'].round(2), inplace=True)
     fig1 = px.bar(
         df_receita_mensal_filtrado,
         x= "Valor Receita Total (R$)",
